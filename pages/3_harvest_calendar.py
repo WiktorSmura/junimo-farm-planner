@@ -216,7 +216,9 @@ def update_calendar_views(selected_crops, rows, current_day, tiles):
             regrowth_days=crop["regrowth_days"],
             current_day=current_day,
             tiles=tiles,
+            yield_per_harvest=crop.get("yield_per_harvest", crop.get("base_yield", 1.0)),
             season_length=crop["window_days"],
+            special_harvest_model=(crop.get("special_harvest_model") or None),
         )
 
         for event in schedule:

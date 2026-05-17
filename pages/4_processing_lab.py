@@ -597,7 +597,7 @@ def _find_row(rows: list[dict], crop_id: str | None) -> dict | None:
 
 def _raw_units(row: dict, tiles: int | None) -> float:
     tile_count = _safe_int(tiles, default=0)
-    return float(row.get("harvest_count", 0)) * float(row.get("base_yield", 1)) * tile_count
+    return float(row.get("harvest_count", 0)) * float(row.get("yield_per_harvest", row.get("base_yield", 1))) * tile_count
 
 
 def _safe_int(value: object, default: int = 0) -> int:

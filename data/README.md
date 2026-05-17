@@ -63,6 +63,7 @@ This reads the raw crop files, applies the game-rule corrections, and writes `da
 | `season` | string | Season label for display, such as `Spring` or `Spring/Summer` |
 | `seasons_list` | list[string] | Parsed list of supported seasons |
 | `seed_price` | integer | Seed cost in gold |
+| `seed_price_model` | string | Seed-cost assumption source (shop, found-seed opportunity cost, crafted, etc.) |
 | `sell_price_raw` | integer | Base sell price before quality or processing |
 | `growth_days` | integer | Days from planting to first harvest |
 | `regrowth_days` | integer | Days between subsequent harvests for regrowable crops |
@@ -70,10 +71,17 @@ This reads the raw crop files, applies the game-rule corrections, and writes `da
 | `is_trellis` | boolean | `True` for known trellis crops in the dataset |
 | `is_multi_season` | boolean | `True` when the crop is available in more than one season |
 | `is_quest_only` | boolean | `True` for quest-limited crops such as Qi Fruit |
+| `profit_supported` | boolean | `False` for random-output seeds excluded from deterministic profit ranking |
+| `farm_context` | string | Context tag such as standard outdoor, quest only, or greenhouse/island only |
 | `rule_note` | string | Applied game-rule note for season/location or availability constraints |
+| `special_harvest_model` | string | Special schedule model such as `last_week_daily` (Tea Leaves) |
 | `available_days` | integer | Baseline contiguous planting window in days for Valley seasons |
-| `base_yield` | integer | Deterministic items per harvest (e.g., Blueberry `3`, Coffee Bean `4`) |
+| `base_yield` | float | Guaranteed deterministic items per harvest |
+| `expected_extra_yield` | float | Expected extra items per harvest where modeled (e.g., Potato/Cranberries) |
+| `yield_per_harvest` | float | Calculation-ready expected yield (`base_yield + expected_extra_yield`) |
+| `yield_note` | string | Notes about excluded rare random extras |
 | `max_harvests` | integer | Baseline max harvest count across the contiguous season window |
+| `seed_cycles` | integer | Number of seed purchases across all harvest cycles |
 | `profit_total` | integer | Baseline raw profit over the contiguous season window |
 | `profit_per_day` | float | Baseline profit normalized by `available_days` |
 | `roi` | float | Baseline return on seed cost |
@@ -85,7 +93,7 @@ This reads the raw crop files, applies the game-rule corrections, and writes `da
 
 - `trellis` is not present in the source dataset and must be curated manually
 - `crop_type` is not present in the source dataset
-- probabilistic extra-yield behavior is not modeled in baseline calculations
+- rare probabilistic bonus yields are generally excluded from deterministic baseline calculations
 - processing values are not present in the source dataset
 - `affordable`, `will_mature`, and `first_harvest_day` will later depend on user inputs
 

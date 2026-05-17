@@ -21,7 +21,7 @@ def test_can_mature():
 
 
 def test_compute_harvest_count_non_regrowing_replant_model():
-    assert compute_harvest_count(current_day=1, growth_days=7, regrowth_days=None) == 4
+    assert compute_harvest_count(current_day=1, growth_days=7, regrowth_days=None) == 3
     assert compute_harvest_count(current_day=28, growth_days=2, regrowth_days=None) == 0
 
 
@@ -42,11 +42,11 @@ def test_compute_crop_profit_non_regrowing():
 
     assert result["can_mature"] is True
     assert result["days_left"] == 28
-    assert result["harvest_count"] == 7
-    assert result["seed_cost"] == 1400.0
-    assert result["revenue"] == 2450.0
-    assert result["profit"] == 1050.0
-    assert result["profit_per_day"] == 37.5
+    assert result["harvest_count"] == 6
+    assert result["seed_cost"] == 1200.0
+    assert result["revenue"] == 2100.0
+    assert result["profit"] == 900.0
+    assert result["profit_per_day"] == 900.0 / 28.0
 
 
 def test_compute_crop_profit_regrowing():
@@ -125,7 +125,7 @@ def test_compute_harvest_schedule_matches_count():
         tiles=10,
     )
     harvests = [e for e in schedule if e["event"] == "Harvest"]
-    assert len(harvests) == 7
+    assert len(harvests) == 6
 
     schedule_regrow = compute_harvest_schedule(
         seed_price=60,

@@ -60,6 +60,8 @@ def build_filtered_snapshot(
         seasons_list = crop["seasons_list"] if isinstance(crop["seasons_list"], list) else []
         if season_name not in seasons_list:
             continue
+        if not bool(crop.get("profit_supported", True)):
+            continue
 
         window_days = _remaining_window_days(
             season=season_name,
@@ -84,9 +86,10 @@ def build_filtered_snapshot(
             regrowth_days=regrowth_days if regrowth_days > 0 else None,
             current_day=1,
             tiles=normalized["tiles"],
-            yield_per_harvest=float(crop["base_yield"]),
+            yield_per_harvest=float(crop["yield_per_harvest"]),
             budget=budget_value,
             season_length=window_days,
+            special_harvest_model=(str(crop.get("special_harvest_model") or "") or None),
         )
 
         warning_flags = _build_warning_flags(
@@ -108,6 +111,9 @@ def build_filtered_snapshot(
             "sell_price_raw": float(crop["sell_price_raw"]),
             "sell_price_effective": adjusted_sell_price,
             "base_yield": float(crop["base_yield"]),
+            "expected_extra_yield": float(crop.get("expected_extra_yield", 0.0)),
+            "yield_per_harvest": float(crop["yield_per_harvest"]),
+            "seed_cycles": int(metrics.get("seed_cycles", 0)),
             "harvest_count": int(metrics["harvest_count"]),
             "revenue": float(metrics["revenue"]),
             "seed_cost": float(metrics["seed_cost"]),
@@ -120,6 +126,11 @@ def build_filtered_snapshot(
             "is_regrowable": bool(crop["is_regrowable"]),
             "is_trellis": bool(crop["is_trellis"]),
             "is_quest_only": bool(crop["is_quest_only"]),
+            "profit_supported": bool(crop.get("profit_supported", True)),
+            "special_harvest_model": str(crop.get("special_harvest_model", "")),
+            "farm_context": str(crop.get("farm_context", "")),
+            "seed_price_model": str(crop.get("seed_price_model", "")),
+            "yield_note": str(crop.get("yield_note", "")),
             "rule_note": str(crop["rule_note"]),
             "warning_flags": warning_flags,
         }

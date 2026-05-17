@@ -78,3 +78,17 @@ def test_snapshot_invalid_inputs_are_handled():
     assert snapshot["filters"]["current_day"] == 1
     assert snapshot["filters"]["tiles"] == 80
     assert snapshot["filters"]["goal"] == "profit_per_day"
+
+
+def test_snapshot_excludes_profit_unsupported_rows():
+    snapshot = build_filtered_snapshot(
+        season="Spring",
+        current_day=1,
+        tiles=80,
+        budget=5000,
+        goal="profit_per_day",
+        fertilizer="none",
+    )
+
+    assert snapshot["rows"]
+    assert all(row.get("profit_supported", True) is True for row in snapshot["rows"])

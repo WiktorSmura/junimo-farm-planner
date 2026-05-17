@@ -8,7 +8,11 @@ import pandas as pd
 from .constants import (
     BASE_YIELD_OVERRIDES,
     CLEAN_CROPS_FILE,
+    CROP_NUMERIC_OVERRIDES,
     CROP_RULE_OVERRIDES,
+    EXPECTED_EXTRA_YIELD_OVERRIDES,
+    MANUAL_RAW_CROP_ROWS,
+    RANDOM_EXTRA_YIELD_NOTES,
     RAW_CROP_SOURCE_FILES,
     RAW_CROPS_FILE,
     RAW_DATA_DIR,
@@ -36,6 +40,7 @@ OUTPUT_COLUMNS = (
     "seasons_list",
     "description",
     "seed_price",
+    "seed_price_model",
     "sell_price_raw",
     "growth_days",
     "regrowth_days",
@@ -43,10 +48,17 @@ OUTPUT_COLUMNS = (
     "is_trellis",
     "is_multi_season",
     "is_quest_only",
+    "profit_supported",
+    "farm_context",
     "rule_note",
+    "special_harvest_model",
     "available_days",
     "base_yield",
+    "expected_extra_yield",
+    "yield_per_harvest",
+    "yield_note",
     "max_harvests",
+    "seed_cycles",
     "profit_total",
     "profit_per_day",
     "roi",
@@ -74,6 +86,7 @@ def load_raw_crops(raw_dir: Path | str | None = None) -> pd.DataFrame:
 
 
 def clean_crops(df: pd.DataFrame) -> pd.DataFrame:
+    df = _append_manual_rows(df)
     missing = [column for column in REQUIRED_RAW_COLUMNS if column not in df.columns]
     if missing:
         raise ValueError(f"Missing required raw columns: {', '.join(missing)}")
@@ -90,23 +103,29 @@ def clean_crops(df: pd.DataFrame) -> pd.DataFrame:
 
     cleaned["multiple_harvests"] = cleaned["multiple_harvests"].map(_parse_yes_no)
     cleaned["edible"] = cleaned["edible"].map(_parse_yes_no)
+    cleaned = _apply_numeric_overrides(cleaned)
 
     grouped_rows = []
     for crop_name, group in cleaned.groupby("crop_name", sort=True):
+        rule_override = CROP_RULE_OVERRIDES.get(crop_name, {})
         seasons = _merge_seasons(group["season"].tolist())
         seasons = _apply_season_override(crop_name, seasons)
         season_label = _season_label(seasons)
-        rule_override = CROP_RULE_OVERRIDES.get(crop_name, {})
-        growth_days = int(group["days_to_grow"].iloc[0])
-        regrowth_days = int(group["regrowth"].iloc[0])
-        seed_price = int(group["seed_price"].iloc[0])
-        sell_price_raw = int(group["sell_price"].iloc[0])
+
+        growth_days = int(group["days_to_grow"].iloc[0]) if pd.notna(group["days_to_grow"].iloc[0]) else 0
+        regrowth_days = int(group["regrowth"].iloc[0]) if pd.notna(group["regrowth"].iloc[0]) else 0
+        seed_price = int(group["seed_price"].iloc[0]) if pd.notna(group["seed_price"].iloc[0]) else 0
+        sell_price_raw = int(group["sell_price"].iloc[0]) if pd.notna(group["sell_price"].iloc[0]) else 0
+
         is_regrowable = bool(regrowth_days > 0 or group["multiple_harvests"].fillna(False).any())
         is_trellis = crop_name in TRELLIS_CROPS
         available_days = _max_contiguous_window_days(seasons)
-        base_yield = int(BASE_YIELD_OVERRIDES.get(crop_name, 1))
-        first_harvest_day = growth_days + 1
-        will_mature = first_harvest_day <= available_days
+        base_yield = float(BASE_YIELD_OVERRIDES.get(crop_name, 1.0))
+        expected_extra_yield = float(EXPECTED_EXTRA_YIELD_OVERRIDES.get(crop_name, 0.0))
+        yield_per_harvest = base_yield + expected_extra_yield
+        first_harvest_day = growth_days + 1 if growth_days > 0 else pd.NA
+        will_mature = bool(growth_days > 0 and first_harvest_day <= available_days)
+
         max_harvests = _max_harvests(
             crop_name=crop_name,
             growth_days=growth_days,
@@ -115,9 +134,18 @@ def clean_crops(df: pd.DataFrame) -> pd.DataFrame:
             seasons_count=len(seasons),
             special_harvest_model=rule_override.get("special_harvest_model"),
         )
-        profit_total = (max_harvests * sell_price_raw * base_yield) - seed_price
-        profit_per_day = profit_total / available_days
-        roi = None if seed_price == 0 else profit_total / seed_price
+        seed_cycles = _seed_cycles(
+            max_harvests=max_harvests,
+            regrowth_days=regrowth_days,
+            special_harvest_model=rule_override.get("special_harvest_model"),
+        )
+
+        profit_supported = bool(rule_override.get("profit_supported", True))
+        revenue = max_harvests * sell_price_raw * yield_per_harvest
+        seed_cost = seed_cycles * seed_price
+        profit_total = revenue - seed_cost if profit_supported else pd.NA
+        profit_per_day = (profit_total / available_days) if profit_supported and available_days > 0 else pd.NA
+        roi = (profit_total / seed_cost) if profit_supported and seed_cost > 0 else (pd.NA if not profit_supported else 0.0)
         affordable = pd.NA
 
         grouped_rows.append(
@@ -128,6 +156,7 @@ def clean_crops(df: pd.DataFrame) -> pd.DataFrame:
                 "seasons_list": seasons,
                 "description": group["description"].iloc[0],
                 "seed_price": seed_price,
+                "seed_price_model": rule_override.get("seed_price_model", "shop_gold"),
                 "sell_price_raw": sell_price_raw,
                 "growth_days": growth_days,
                 "regrowth_days": regrowth_days,
@@ -135,10 +164,17 @@ def clean_crops(df: pd.DataFrame) -> pd.DataFrame:
                 "is_trellis": is_trellis,
                 "is_multi_season": len(seasons) > 1,
                 "is_quest_only": bool(rule_override.get("quest_only", False)),
+                "profit_supported": profit_supported,
+                "farm_context": rule_override.get("farm_context", "standard_outdoor"),
                 "rule_note": rule_override.get("rule_note", ""),
+                "special_harvest_model": rule_override.get("special_harvest_model", ""),
                 "available_days": available_days,
                 "base_yield": base_yield,
+                "expected_extra_yield": expected_extra_yield,
+                "yield_per_harvest": yield_per_harvest,
+                "yield_note": RANDOM_EXTRA_YIELD_NOTES.get(crop_name, ""),
                 "max_harvests": max_harvests,
+                "seed_cycles": seed_cycles,
                 "profit_total": profit_total,
                 "profit_per_day": profit_per_day,
                 "roi": roi,
@@ -180,6 +216,36 @@ def _read_clean_crops(path: Path) -> pd.DataFrame:
     return df
 
 
+def _append_manual_rows(df: pd.DataFrame) -> pd.DataFrame:
+    if not MANUAL_RAW_CROP_ROWS:
+        return df
+    existing_names = set(df.get("crop_name", pd.Series(dtype=str)).astype(str).str.strip())
+    rows = [row for row in MANUAL_RAW_CROP_ROWS if row["crop_name"] not in existing_names]
+    if not rows:
+        return df
+    return pd.concat([df, pd.DataFrame(rows)], ignore_index=True)
+
+
+def _apply_numeric_overrides(df: pd.DataFrame) -> pd.DataFrame:
+    updated = df.copy()
+    for crop_name, overrides in CROP_NUMERIC_OVERRIDES.items():
+        mask = updated["crop_name"] == crop_name
+        if not mask.any():
+            continue
+        for raw_column, value in overrides.items():
+            if raw_column == "growth_days":
+                column = "days_to_grow"
+            elif raw_column == "regrowth_days":
+                column = "regrowth"
+            elif raw_column == "sell_price_raw":
+                column = "sell_price"
+            else:
+                column = raw_column
+            if column in updated.columns:
+                updated.loc[mask, column] = value
+    return updated
+
+
 def _parse_yes_no(value: object) -> bool:
     if pd.isna(value):
         return False
@@ -216,6 +282,9 @@ def _max_harvests(
     seasons_count: int,
     special_harvest_model: str | None,
 ) -> int:
+    if growth_days < 1 or available_days < 1:
+        return 0
+
     first_harvest_day = growth_days + 1
     if first_harvest_day > available_days:
         return 0
@@ -224,9 +293,19 @@ def _max_harvests(
         return _max_harvests_last_week_daily(first_harvest_day=first_harvest_day, seasons_count=seasons_count)
 
     if regrowth_days <= 0:
-        return 1
+        # Planting on day 1 with N growth days harvests on day 1+N.
+        # Therefore only available_days - 1 nights can be used for harvest cycles.
+        return (available_days - 1) // growth_days
 
     return 1 + max(0, (available_days - first_harvest_day) // regrowth_days)
+
+
+def _seed_cycles(max_harvests: int, regrowth_days: int, special_harvest_model: str | None) -> int:
+    if max_harvests < 1:
+        return 0
+    if special_harvest_model is not None:
+        return 1
+    return 1 if regrowth_days > 0 else max_harvests
 
 
 def _max_harvests_last_week_daily(first_harvest_day: int, seasons_count: int) -> int:

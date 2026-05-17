@@ -13,7 +13,7 @@ def test_load_raw_crops_uses_canonical_dataset():
 def test_clean_crops_merges_duplicate_seasons():
     clean = clean_crops(load_raw_crops())
 
-    assert len(clean) == 50
+    assert len(clean) == 51
     assert clean["crop_id"].is_unique
 
     corn = clean.loc[clean["crop_name"] == "Corn"].iloc[0]
@@ -46,11 +46,22 @@ def test_clean_crops_applies_game_rule_overrides():
     qi = clean.loc[clean["crop_name"] == "Qi Fruit"].iloc[0]
     assert bool(qi["is_quest_only"]) is True
 
+    broccoli = clean.loc[clean["crop_name"] == "Broccoli"].iloc[0]
+    assert broccoli["season"] == "Fall"
+    assert broccoli["regrowth_days"] == 4
+    assert broccoli["sell_price_raw"] == 70
+
+    potato = clean.loc[clean["crop_name"] == "Potato"].iloc[0]
+    assert potato["yield_per_harvest"] == 1.25
+
+    mixed = clean.loc[clean["crop_name"] == "Mixed Seeds"].iloc[0]
+    assert bool(mixed["profit_supported"]) is False
+
 
 def test_load_clean_crops_reads_or_builds_processed_cache():
     clean = load_clean_crops(force_refresh=True)
     processed_file = Path("data/processed/crops_clean.csv")
 
     assert processed_file.exists()
-    assert len(clean) == 50
+    assert len(clean) == 51
     assert "seasons_list" in clean.columns

@@ -28,12 +28,72 @@ RAW_CROP_SOURCE_FILES = (
     "special_crops_info.csv",
 )
 
-# Known per-harvest base yield overrides for crops that produce multiple items.
-# Chance-based bonus drops are intentionally excluded from this deterministic baseline.
+# Manual additions for crops missing from the Kaggle source file.
+# Broccoli was added in Stardew Valley 1.6 and is present on the current wiki,
+# but is absent from the uploaded raw file.
+MANUAL_RAW_CROP_ROWS = (
+    {
+        "crop_name": "Broccoli",
+        "description": "The flowering head of a broccoli plant. The tiny buds give it a unique texture.",
+        "days_to_grow": 8,
+        "regrowth": 4,
+        # Broccoli Seeds are not sold in shops; this is the seed sell price/opportunity cost.
+        "seed_price": 40,
+        "sell_price": 70,
+        "multiple_harvests": "YES",
+        "edible": "YES",
+        "season": "Fall",
+    },
+)
+
+# Numeric corrections applied after loading raw data.
+# These keep the dashboard closer to current Stardew Valley 1.6 mechanics.
+CROP_NUMERIC_OVERRIDES = {
+    # 1.6 seasonal seeds are not sold by Pierre/Joja/Traveling Cart; use seed sell price
+    # as an opportunity-cost model instead of the crop sell price from the raw source.
+    "Carrot": {"seed_price": 15},
+    "Summer Squash": {"seed_price": 20},
+    "Broccoli": {"seed_price": 40},
+    "Powdermelon": {"seed_price": 20},
+    # Coffee Bean can be planted directly. For repeat planting, the relevant opportunity
+    # cost is one bean, not a normal shop seed price.
+    "Coffee Bean": {"seed_price": 15},
+    # Ancient Seeds are crafted from the artifact recipe or obtained by seed maker;
+    # they are not a regular gold shop seed.
+    "Ancient Fruit": {"seed_price": 0},
+    # Fiber Seeds are crafted. The source used 5g, but the current wiki lists crafting recipe.
+    "Fiber Seeds": {"seed_price": 0},
+    # The uploaded raw source has Pineapple as one-shot, but current game data regrows it.
+    "Pineapple": {"regrowth": 7},
+}
+
+# Guaranteed per-harvest yields. This is deterministic output before rare random extras.
 BASE_YIELD_OVERRIDES = {
     "Blueberry": 3,
     "Coffee Bean": 4,
     "Cranberries": 2,
+}
+
+# Expected bonus yield used for profit estimates when the wiki gives a useful expectation.
+# Rare "chance for more" outcomes are otherwise intentionally documented but excluded from
+# expected profit because the official crop table generally excludes them.
+EXPECTED_EXTRA_YIELD_OVERRIDES = {
+    "Potato": 0.25,
+    "Cranberries": 0.11,
+    # Fiber produces 4-7 fiber; use midpoint for expected raw-material yield.
+    "Fiber Seeds": 4.5,  # base 1 + 4.5 = 5.5 expected Fiber
+}
+
+RANDOM_EXTRA_YIELD_NOTES = {
+    "Blueberry": "Guaranteed 3 blueberries; rare 2% extra not included in default expected yield.",
+    "Coffee Bean": "Guaranteed 4 beans; rare 2% extra not included in default expected yield.",
+    "Strawberry": "Rare 2% extra strawberries not included in default expected yield.",
+    "Hot Pepper": "Rare 3% extra peppers not included in default expected yield.",
+    "Tomato": "Rare 5% extra tomatoes not included in default expected yield.",
+    "Eggplant": "Rare 0.2% extra eggplants not included in default expected yield.",
+    "Cranberries": "Guaranteed 2 berries plus 0.11 expected extra berries per harvest.",
+    "Potato": "Uses 1.25 expected potatoes per harvest, matching the wiki's high-probability potato exception.",
+    "Fiber Seeds": "Uses midpoint of 4-7 Fiber per harvest; rare 1% extra Fiber not included.",
 }
 
 # Data corrections for the default "Valley farm" context.
@@ -41,29 +101,90 @@ BASE_YIELD_OVERRIDES = {
 CROP_RULE_OVERRIDES = {
     "Ancient Fruit": {
         "valley_seasons": ("Spring", "Summer", "Fall"),
-        "rule_note": "All-year growth applies in Greenhouse/Ginger Island, not standard outdoor winter.",
+        "farm_context": "standard_outdoor",
+        "seed_price_model": "crafted_or_seed_maker",
+        "rule_note": "Grows outdoors in Spring/Summer/Fall; all-year growth applies in Greenhouse/Ginger Island.",
+    },
+    "Cactus Fruit": {
+        "farm_context": "greenhouse_indoor_or_island_only",
+        "seed_price_model": "shop_gold",
+        "rule_note": "Can only be grown in the Greenhouse, Garden Pots indoors, or on Ginger Island.",
     },
     "Pineapple": {
         "valley_seasons": ("Summer",),
-        "rule_note": "All-year growth applies on Ginger Island.",
+        "farm_context": "standard_outdoor_or_ginger_island",
+        "seed_price_model": "barter_or_seed_maker",
+        "rule_note": "Grows in Summer on the standard farm and all year on Ginger Island; regrows every 7 days.",
     },
     "Taro Root (Irrigated)": {
         "valley_seasons": ("Summer",),
-        "rule_note": "All-year growth applies on Ginger Island.",
+        "farm_context": "standard_outdoor_or_ginger_island",
+        "seed_price_model": "barter_or_seed_maker",
+        "rule_note": "Grows in Summer on the standard farm and all year on Ginger Island; irrigated growth model.",
     },
     "Taro Root (Unirrigated)": {
         "valley_seasons": ("Summer",),
-        "rule_note": "All-year growth applies on Ginger Island.",
+        "farm_context": "standard_outdoor_or_ginger_island",
+        "seed_price_model": "barter_or_seed_maker",
+        "rule_note": "Grows in Summer on the standard farm and all year on Ginger Island; unirrigated growth model.",
     },
     "Tea Leaves": {
         "valley_seasons": ("Spring", "Summer", "Fall"),
+        "farm_context": "standard_outdoor_or_indoor",
         "special_harvest_model": "last_week_daily",
-        "rule_note": "Outdoor harvest occurs only during days 22-28 each season.",
+        "seed_price_model": "tea_sapling",
+        "rule_note": "Tea Bushes produce daily only during days 22-28 of Spring/Summer/Fall outdoors; Winter only if indoors.",
     },
     "Qi Fruit": {
         "valley_seasons": ("Spring", "Summer", "Fall", "Winter"),
+        "farm_context": "quest_only",
         "quest_only": True,
+        "seed_price_model": "quest_drop",
         "rule_note": "Only available during the Qi's Crop quest.",
+    },
+    "Mixed Seeds": {
+        "valley_seasons": ("Spring", "Summer", "Fall"),
+        "farm_context": "random_seed",
+        "profit_supported": False,
+        "seed_price_model": "random_drop",
+        "rule_note": "Random seasonal output; exclude from deterministic profit rankings.",
+    },
+    "Mixed Flower Seeds": {
+        "valley_seasons": ("Spring", "Summer", "Fall"),
+        "farm_context": "random_seed",
+        "profit_supported": False,
+        "seed_price_model": "random_drop",
+        "rule_note": "Random seasonal flower output; exclude from deterministic profit rankings.",
+    },
+    "Fiber Seeds": {
+        "farm_context": "crafting_material",
+        "seed_price_model": "crafted",
+        "rule_note": "Useful for Fiber, not primarily a cash crop; expected yield uses midpoint of 4-7 Fiber.",
+    },
+    "Carrot": {
+        "seed_price_model": "found_seed_opportunity_cost",
+        "rule_note": "Seeds are not sold in shops; seed_price uses seed sell price/opportunity cost.",
+    },
+    "Summer Squash": {
+        "seed_price_model": "found_seed_opportunity_cost",
+        "rule_note": "Seeds are not sold in shops; seed_price uses seed sell price/opportunity cost.",
+    },
+    "Broccoli": {
+        "seed_price_model": "found_seed_opportunity_cost",
+        "rule_note": "Seeds are not sold in shops; seed_price uses seed sell price/opportunity cost.",
+    },
+    "Powdermelon": {
+        "seed_price_model": "found_seed_opportunity_cost",
+        "rule_note": "Seeds are not sold in shops; seed_price uses seed sell price/opportunity cost.",
+    },
+    "Coffee Bean": {
+        "seed_price_model": "bean_opportunity_cost",
+        "rule_note": (
+            "Uses one Coffee Bean's sell price as seed opportunity cost; Traveling Cart initial purchase is much higher."
+        ),
+    },
+    "Sunflower": {
+        "rule_note": "Harvest can return Sunflower Seeds; this deterministic profit model does not credit seed returns.",
     },
 }
 
