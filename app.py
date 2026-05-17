@@ -4,7 +4,6 @@ from dash import Dash, Input, Output, callback, dcc, html, page_container
 from src.dashboard_state import (
     DEFAULT_FILTERS,
     FERTILIZER_OPTIONS,
-    GOAL_OPTIONS,
     PROCESSING_OPTIONS,
     SEASON_OPTIONS,
     build_filtered_snapshot,
@@ -62,123 +61,152 @@ app.layout = html.Div(
         html.Header(
             className="app-header",
             children=[
-                html.Img(src="/assets/logo.svg", alt="Junimo Farm Planner logo", className="app-logo"),
                 html.Div(
+                    className="brand-lockup",
                     children=[
-                        html.P("Stardew Valley crop planning", className="eyebrow"),
-                        html.H1("Junimo Farm Planner"),
-                        html.P(
-                            "Enter your season, day, space, and budget to get planting advice that matches your current run.",
-                            className="app-tagline",
-                        ),
-                    ]
-                ),
-            ],
-        ),
-        html.Nav(className="app-nav", children=_page_links()),
-        html.Section(
-            className="control-panel",
-            children=[
-                html.Div(
-                    className="control-grid",
-                    children=[
-                        _control_field(
-                            "Season",
-                            dcc.Dropdown(
-                                id="season-control",
-                                options=SEASON_OPTIONS,
-                                value=DEFAULT_FILTERS["season"],
-                                clearable=False,
-                            ),
-                            "Current outdoor season.",
-                        ),
-                        _control_field(
-                            "Current day",
-                            dcc.Slider(
-                                id="day-control",
-                                min=1,
-                                max=28,
-                                step=1,
-                                marks={1: "1", 7: "7", 14: "14", 21: "21", 28: "28"},
-                                value=DEFAULT_FILTERS["current_day"],
-                            ),
-                            "Used to check whether crops can mature in time.",
-                        ),
-                        _control_field(
-                            "Farm tiles",
-                            dcc.Input(
-                                id="tiles-control",
-                                type="number",
-                                min=0,
-                                step=1,
-                                value=DEFAULT_FILTERS["tiles"],
-                                className="control-input",
-                            ),
-                            "How many crop tiles you plan to fill.",
-                        ),
-                        _control_field(
-                            "Budget (g)",
-                            dcc.Input(
-                                id="budget-control",
-                                type="number",
-                                min=0,
-                                step=100,
-                                value=DEFAULT_FILTERS["budget"],
-                                className="control-input",
-                            ),
-                            "Gold available for seeds now.",
-                        ),
-                        _control_field(
-                            "Goal",
-                            dcc.RadioItems(
-                                id="goal-control",
-                                options=GOAL_OPTIONS,
-                                value=DEFAULT_FILTERS["goal"],
-                                className="goal-control",
-                                inputClassName="goal-control-input",
-                                labelClassName="goal-control-label",
-                            ),
-                            "How crops are ranked across pages.",
-                        ),
-                        _control_field(
-                            "Processing mode",
-                            dcc.Dropdown(
-                                id="processing-control",
-                                options=PROCESSING_OPTIONS,
-                                value=DEFAULT_FILTERS["processing_mode"],
-                                clearable=False,
-                            ),
-                            "Approximate value uplift used for ranking.",
-                        ),
-                        _control_field(
-                            "Fertilizer",
-                            dcc.Dropdown(
-                                id="fertilizer-control",
-                                options=FERTILIZER_OPTIONS,
-                                value=DEFAULT_FILTERS["fertilizer"],
-                                clearable=False,
-                            ),
-                            "Approximate growth-speed modifier.",
-                        ),
-                        _control_field(
-                            "Search crop",
-                            dcc.Input(
-                                id="crop-search-control",
-                                type="text",
-                                value=DEFAULT_FILTERS["search_term"],
-                                placeholder="e.g., blueberry, corn, tea",
-                                className="control-input",
-                            ),
-                            "Filters crops by name in real time.",
+                        html.Img(src="/assets/logo.svg", alt="Junimo Farm Planner logo", className="app-logo"),
+                        html.Div(
+                            children=[
+                                html.P("Stardew Valley crop planning", className="eyebrow"),
+                                html.H1("Junimo Farm Planner"),
+                                html.P(
+                                    "Planting decisions for the current season, budget, and farm capacity.",
+                                    className="app-tagline",
+                                ),
+                            ]
                         ),
                     ],
                 ),
-                html.Div(id="global-summary", className="control-summary"),
-                dcc.Store(id="filtered-crops-store"),
-                dcc.Store(id="selected-crop-store"),
+                html.Nav(className="app-nav desktop-nav", children=_page_links()),
             ],
         ),
-        html.Main(className="page-container", children=page_container),
+        html.Details(
+            className="mobile-nav",
+            children=[
+                html.Summary("Pages"),
+                html.Nav(className="mobile-nav-links", children=_page_links()),
+            ],
+        ),
+        html.Div(
+            className="dashboard-layout",
+            children=[
+                html.Aside(
+                    className="control-panel",
+                    children=[
+                        html.Details(
+                            className="control-details",
+                            children=[
+                                html.Summary(
+                                    className="control-panel-header",
+                                    children=[
+                                        html.H2("Farm Context"),
+                                        html.P("Season, timing, budget, processing, and crop search."),
+                                    ],
+                                ),
+                                html.Div(
+                                    className="control-grid",
+                                    children=[
+                                        _control_field(
+                                            "Season",
+                                            dcc.Dropdown(
+                                                id="season-control",
+                                                options=SEASON_OPTIONS,
+                                                value=DEFAULT_FILTERS["season"],
+                                                clearable=False,
+                                            ),
+                                            "Current outdoor season",
+                                        ),
+                                        _control_field(
+                                            "Current day",
+                                            dcc.Slider(
+                                                id="day-control",
+                                                min=1,
+                                                max=28,
+                                                step=1,
+                                                marks={1: "1", 7: "7", 14: "14", 21: "21", 28: "28"},
+                                                value=DEFAULT_FILTERS["current_day"],
+                                            ),
+                                            "Remaining window in season",
+                                        ),
+                                        _control_field(
+                                            "Farm tiles",
+                                            dcc.Input(
+                                                id="tiles-control",
+                                                type="number",
+                                                min=0,
+                                                step=1,
+                                                value=DEFAULT_FILTERS["tiles"],
+                                                className="control-input",
+                                            ),
+                                            "Planting capacity",
+                                        ),
+                                        _control_field(
+                                            "Budget (g)",
+                                            dcc.Input(
+                                                id="budget-control",
+                                                type="number",
+                                                min=0,
+                                                step=100,
+                                                value=DEFAULT_FILTERS["budget"],
+                                                className="control-input",
+                                            ),
+                                            "Gold for seeds",
+                                        ),
+                                        _control_field(
+                                            "Processing mode",
+                                            dcc.Dropdown(
+                                                id="processing-control",
+                                                options=PROCESSING_OPTIONS,
+                                                value=DEFAULT_FILTERS["processing_mode"],
+                                                clearable=False,
+                                            ),
+                                            "Value uplift profile",
+                                        ),
+                                        _control_field(
+                                            "Fertilizer",
+                                            dcc.Dropdown(
+                                                id="fertilizer-control",
+                                                options=FERTILIZER_OPTIONS,
+                                                value=DEFAULT_FILTERS["fertilizer"],
+                                                clearable=False,
+                                            ),
+                                            "Growth-speed profile",
+                                        ),
+                                        _control_field(
+                                            "Search crop",
+                                            dcc.Input(
+                                                id="crop-search-control",
+                                                type="text",
+                                                value=DEFAULT_FILTERS["search_term"],
+                                                placeholder="Search crop",
+                                                className="control-input",
+                                            ),
+                                            "Filters all crop views",
+                                        ),
+                                    ],
+                                ),
+                            ],
+                        ),
+                        html.Div(
+                            className="control-status",
+                            children=[
+                                html.Div(
+                                    className="control-status-heading",
+                                    children=[
+                                        html.H3("Current Recommendation"),
+                                        html.P("Updates from the active filters."),
+                                    ],
+                                ),
+                                html.Div(id="global-summary", className="control-summary"),
+                            ],
+                        ),
+                    ],
+                ),
+                html.Main(className="page-container", children=page_container),
+            ],
+        ),
+        dcc.Store(id="filtered-crops-store"),
+        dcc.Store(id="selected-crop-store"),
     ],
 )
 
@@ -191,7 +219,6 @@ app.layout = html.Div(
     Input("day-control", "value"),
     Input("tiles-control", "value"),
     Input("budget-control", "value"),
-    Input("goal-control", "value"),
     Input("processing-control", "value"),
     Input("fertilizer-control", "value"),
     Input("crop-search-control", "value"),
@@ -201,7 +228,6 @@ def sync_shared_state(
     day: int,
     tiles: int,
     budget: float | None,
-    goal: str,
     processing_mode: str,
     fertilizer: str,
     search_term: str,
@@ -211,7 +237,7 @@ def sync_shared_state(
         current_day=day,
         tiles=tiles,
         budget=budget,
-        goal=goal,
+        goal=None,
         processing_mode=processing_mode,
         fertilizer=fertilizer,
         search_term=search_term,

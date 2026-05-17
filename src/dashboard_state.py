@@ -33,7 +33,6 @@ DEFAULT_FILTERS = {
     "current_day": 1,
     "tiles": 80,
     "budget": 5000.0,
-    "goal": "profit_per_day",
     "processing_mode": "raw",
     "fertilizer": "none",
     "search_term": "",
@@ -165,6 +164,7 @@ def _normalize_filters(
     search_term: str | None,
 ) -> dict[str, Any]:
     normalized = dict(DEFAULT_FILTERS)
+    normalized["goal"] = "profit_per_day"
 
     if season in SEASON_ORDER:
         normalized["season"] = season
