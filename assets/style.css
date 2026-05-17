@@ -443,6 +443,213 @@ a:hover {
   border-top: 1px solid var(--border);
 }
 
+.explorer-controls-section {
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.explorer-control-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: end;
+  gap: 14px;
+}
+
+.explorer-toggle-row {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.explorer-toggle-row button {
+  min-height: 36px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 0 12px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.explorer-toggle-row button:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.inline-checklist {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+}
+
+.inline-checklist-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.inline-checklist-input {
+  accent-color: var(--accent);
+}
+
+.explorer-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(420px, 0.9fr);
+  gap: 28px;
+  margin-bottom: 26px;
+}
+
+.explorer-scatter-section,
+.explorer-side-section {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.explorer-scatter,
+.explorer-benchmark {
+  width: 100%;
+  overflow: hidden;
+}
+
+.explorer-scatter {
+  height: 520px;
+  min-height: 520px;
+}
+
+.explorer-benchmark {
+  min-height: 420px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+
+.benchmark-panel {
+  display: grid;
+  gap: 16px;
+  padding-top: 8px;
+}
+
+.explorer-benchmark-empty {
+  display: flex;
+  align-items: center;
+  min-height: 320px;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.benchmark-row {
+  display: grid;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.benchmark-row:last-child {
+  border-bottom: 0;
+}
+
+.benchmark-head,
+.benchmark-values {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.benchmark-label {
+  color: var(--ink);
+  font-size: 0.98rem;
+  font-weight: 750;
+}
+
+.benchmark-delta {
+  flex: 0 0 92px;
+  font-size: 1rem;
+  font-weight: 800;
+  text-align: right;
+}
+
+.benchmark-delta.positive {
+  color: var(--accent-strong);
+}
+
+.benchmark-delta.negative {
+  color: #c6283e;
+}
+
+.benchmark-values {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.benchmark-selected,
+.benchmark-average {
+  min-width: 0;
+}
+
+.benchmark-track {
+  position: relative;
+  height: 20px;
+  border-radius: 999px;
+  background: #e9f0f6;
+  overflow: hidden;
+}
+
+.benchmark-midline {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  background: #143047;
+  opacity: 0.8;
+  transform: translateX(-50%);
+}
+
+.benchmark-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+}
+
+.benchmark-fill.positive {
+  left: 50%;
+  background: var(--green);
+}
+
+.benchmark-fill.negative {
+  right: 50%;
+  background: var(--danger);
+}
+
+.explorer-comparison-card {
+  margin-top: 16px;
+}
+
+.explorer-comparison-card > p {
+  margin-bottom: 12px;
+}
+
+.explorer-metric-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.metric-delta {
+  display: block;
+  margin-top: 5px;
+  color: var(--accent-strong);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
 .plan-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -606,6 +813,14 @@ a:hover {
     grid-template-columns: 1fr;
   }
 
+  .explorer-control-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .explorer-main-grid {
+    grid-template-columns: 1fr;
+  }
+
   .plan-grid {
     grid-template-columns: minmax(0, 1fr) minmax(260px, 0.8fr);
   }
@@ -687,6 +902,8 @@ a:hover {
   .mobile-nav-links,
   .control-grid,
   .plan-cards,
+  .explorer-control-grid,
+  .explorer-metric-grid,
   .metric-grid {
     grid-template-columns: 1fr;
   }
