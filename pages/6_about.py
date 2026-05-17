@@ -18,6 +18,8 @@ layout = html.Div(
                 html.Li("Non-regrowing crops are replanted after each harvest."),
                 html.Li("Regrowing crops pay seed cost once per tile."),
                 html.Li("Profit = revenue - seed cost, ROI = profit / seed cost."),
+                html.Li("Fertilizer control uses approximate growth-speed factors for planning."),
+                html.Li("Processing mode uses planning multipliers until full processing simulation is added."),
             ]
         ),
     ],
