@@ -653,7 +653,7 @@ a:hover {
 
 .processing-recommendation {
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 .processing-page .page-head {
@@ -693,6 +693,20 @@ a:hover {
   color: var(--accent-strong);
   font-size: 1.62rem;
   line-height: 1;
+}
+
+.processing-flow-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.processing-flow-item {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
 }
 
 .processing-controls-section {

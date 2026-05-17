@@ -175,8 +175,8 @@ layout = html.Div(
                         html.Div(
                             className="section-head",
                             children=[
-                                html.H3("Value Ladder"),
-                                html.P("How far each method moves one raw crop unit above the raw baseline."),
+                                html.H3("Value Runway"),
+                                html.P("Per-unit method value against the raw crop baseline."),
                             ],
                         ),
                         dcc.Graph(
@@ -192,8 +192,8 @@ layout = html.Div(
                         html.Div(
                             className="section-head",
                             children=[
-                                html.H3("Extra Gold"),
-                                html.P("Total value lift after equipment limits."),
+                                html.H3("Revenue Lift Map"),
+                                html.P("Total revenue versus extra gold after equipment limits."),
                             ],
                         ),
                         dcc.Graph(
@@ -209,8 +209,8 @@ layout = html.Div(
                         html.Div(
                             className="section-head",
                             children=[
-                                html.H3("Machine Utilization"),
-                                html.P("Used processing batches against available machine cycles."),
+                                html.H3("Throughput Strip"),
+                                html.P("Used cycles and idle capacity by machine path."),
                             ],
                         ),
                         dcc.Graph(
@@ -372,26 +372,102 @@ def update_processing_lab(
 def _build_value_ladder(methods: list[dict]) -> go.Figure:
     raw_value = next(method["value_per_input"] for method in methods if method["method_id"] == "raw")
     ranked = sorted(methods, key=lambda method: method["value_per_input"], reverse=True)
-    labels = [_method_label(method) for method in ranked]
+    labels = [_short_method_label(method) for method in ranked]
+    values = [float(method["value_per_input"]) for method in ranked]
+    lift_values = [value - raw_value for value in values]
+    max_value = max(values)
+    left_padding = max_value * 0.02
+    right_padding = max_value * 0.16
 
     figure = go.Figure()
-    for method, label in zip(ranked, labels, strict=True):
-        value = method["value_per_input"]
-        color = "#23a67a" if value >= raw_value else "#ff334a"
-        figure.add_trace(
-            go.Scatter(
-                x=[raw_value, value],
-                y=[label, label],
-                mode="lines+markers",
-                line={"color": color, "width": 5},
-                marker={"size": [8, 12], "color": ["#b8c5d0", color], "line": {"color": "#ffffff", "width": 1}},
-                showlegend=False,
-                hovertemplate=f"{label}<br>Value: {value:,.1f}g per raw unit<extra></extra>",
-            )
+    figure.add_trace(
+        go.Bar(
+            x=values,
+            y=labels,
+            orientation="h",
+            marker={
+                "color": values,
+                "colorscale": [[0, "#dfe7ee"], [0.5, "#1497ee"], [1, "#23a67a"]],
+                "cmin": raw_value,
+                "cmax": max_value,
+                "line": {"color": "#ffffff", "width": 1},
+            },
+            width=0.58,
+            text=[f"{value:,.0f}g" for value in values],
+            textposition="outside",
+            cliponaxis=False,
+            customdata=[
+                [
+                    _method_label(method),
+                    lift,
+                    method["value_per_input"] / raw_value if raw_value else 0,
+                ]
+                for method, lift in zip(ranked, lift_values, strict=True)
+            ],
+            hovertemplate=(
+                "<b>%{customdata[0]}</b><br>"
+                "Value: %{x:,.1f}g per raw unit<br>"
+                "Lift vs raw: %{customdata[1]:+,.1f}g<br>"
+                "Multiplier: %{customdata[2]:.2f}x<extra></extra>"
+            ),
         )
+    )
+    figure.add_trace(
+        go.Scatter(
+            x=[raw_value for _ in ranked],
+            y=labels,
+            mode="markers",
+            marker={"symbol": "line-ns-open", "size": 22, "color": "#143047", "line": {"width": 3}},
+            name="Raw baseline",
+            hovertemplate="Raw baseline: %{x:,.1f}g<extra></extra>",
+        )
+    )
+    for label, value, lift in zip(labels, values, lift_values, strict=True):
+        if lift > 0:
+            figure.add_shape(
+                type="line",
+                x0=raw_value,
+                x1=value,
+                y0=label,
+                y1=label,
+                xref="x",
+                yref="y",
+                line={"color": "rgba(35, 166, 122, 0.22)", "width": 10},
+                layer="below",
+            )
 
-    figure.add_vline(x=raw_value, line_color="#143047", line_dash="dot", line_width=1, opacity=0.55)
-    _apply_chart_layout(figure, title="Gold per Raw Unit", height=max(320, 104 + (len(ranked) * 42)))
+    figure.add_vline(
+        x=raw_value,
+        line_color="#143047",
+        line_dash="dot",
+        line_width=1,
+        opacity=0.58,
+        annotation_text="raw",
+        annotation_position="top",
+        annotation_font={"size": 11, "color": "#536679"},
+    )
+    figure.update_layout(
+        height=max(360, 138 + (len(ranked) * 54)),
+        margin={"l": 126, "r": 72, "t": 24, "b": 54},
+        font={"color": "#24384a", "family": "Inter, Segoe UI, sans-serif", "size": 12},
+        hoverlabel={"bgcolor": "#143047", "bordercolor": "#143047", "font": {"color": "#ffffff", "size": 12}},
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        showlegend=False,
+        bargap=0.38,
+        xaxis={
+            "automargin": True,
+            "fixedrange": True,
+            "gridcolor": "#e4ebf2",
+            "linecolor": "#c8d2dc",
+            "range": [max(0, min(values) - left_padding), max_value + right_padding],
+            "showline": True,
+            "title": {"text": "Gold per Raw Unit", "standoff": 12},
+            "ticksuffix": "g",
+            "zeroline": False,
+        },
+        yaxis={"automargin": True, "fixedrange": True, "autorange": "reversed", "tickfont": {"size": 12}},
+    )
     return figure
 
 
@@ -404,95 +480,47 @@ def _build_extra_chart(evaluated: list[dict]) -> go.Figure:
     if not ranked:
         return _empty_figure("This crop has no processing methods beyond raw sale.")
 
-    colors = ["#23a67a" if item["extra_revenue"] >= 0 else "#ff334a" for item in ranked]
-    return _bar_figure(
-        names=[_method_label(item) for item in ranked],
-        values=[item["extra_revenue"] for item in ranked],
-        title="Extra Gold vs Raw Sale",
-        suffix="g",
-        color=colors,
-    )
-
-
-def _build_utilization_chart(evaluated: list[dict]) -> go.Figure:
-    methods = [item for item in evaluated if item["equipment"] != EQUIPMENT_NONE and item["machine_cycles"] > 0]
-    if not methods:
-        return _empty_figure("No available machine cycles for this crop and setup.")
-
-    methods = sorted(methods, key=lambda item: item["processed_batches"] / item["machine_cycles"], reverse=True)
-    labels = [_method_label(item) for item in methods]
-    utilization = [(item["processed_batches"] / item["machine_cycles"]) * 100 for item in methods]
-    text = [f"{item['processed_batches']:,.0f}/{item['machine_cycles']:,.0f} cycles" for item in methods]
-
-    figure = go.Figure()
-    figure.add_bar(
-        name="Machine utilization",
-        y=labels,
-        x=utilization,
-        orientation="h",
-        marker={
-            "color": utilization,
-            "colorscale": [[0, "#dfe7ee"], [0.65, "#1497ee"], [1, "#23a67a"]],
-            "cmin": 0,
-            "cmax": 100,
-            "line": {"color": "#ffffff", "width": 1},
-        },
-        text=text,
-        textposition="auto",
-        hovertemplate="%{y}<br>Utilization: %{x:.0f}%<br>%{text}<extra></extra>",
-    )
-    _apply_chart_layout(figure, title="Cycle Utilization (%)", height=max(300, 100 + (len(methods) * 40)))
-    figure.update_layout(
-        xaxis={
-            "automargin": True,
-            "fixedrange": True,
-            "gridcolor": "#e4ebf2",
-            "linecolor": "#c8d2dc",
-            "range": [0, 100],
-            "showline": True,
-            "title": {"text": "Cycle Utilization (%)", "standoff": 12},
-            "zeroline": False,
-        }
-    )
-    return figure
-
-
-def _bar_figure(names: list[str], values: list[float], title: str, suffix: str, color: str | list[str]) -> go.Figure:
-    max_value = max(values) if values else 1
-    min_value = min(values) if values else 0
-    axis_padding = max(abs(max_value), abs(min_value), 1) * 0.14
+    max_processed = max(float(item["processed_units"]) for item in ranked) or 1
     figure = go.Figure(
-        go.Bar(
-            x=values,
-            y=names,
-            orientation="h",
-            marker_color=color,
-            text=[f"{value:,.0f}{suffix}" for value in values],
-            textposition="auto",
-            hovertemplate="%{y}: %{x:,.1f}" + suffix + "<extra></extra>",
+        go.Scatter(
+            x=[item["total_revenue"] for item in ranked],
+            y=[item["extra_revenue"] for item in ranked],
+            mode="markers+text",
+            text=[_short_method_label(item) for item in ranked],
+            textposition="top center",
+            marker={
+                "size": [max(18, min(56, 18 + (float(item["processed_units"]) / max_processed) * 38)) for item in ranked],
+                "color": [item["extra_revenue"] for item in ranked],
+                "colorscale": [[0, "#ff334a"], [0.45, "#f39c12"], [1, "#23a67a"]],
+                "cmin": min(0, min(item["extra_revenue"] for item in ranked)),
+                "cmax": max(1, max(item["extra_revenue"] for item in ranked)),
+                "line": {"color": "#ffffff", "width": 2},
+                "opacity": 0.9,
+                "showscale": False,
+            },
+            customdata=[
+                [
+                    _method_label(item),
+                    item["processed_units"],
+                    item["leftover_units"],
+                    item["unit_value"],
+                ]
+                for item in ranked
+            ],
+            hovertemplate=(
+                "<b>%{customdata[0]}</b><br>"
+                "Total revenue: %{x:,.0f}g<br>"
+                "Extra vs raw: %{y:,.0f}g<br>"
+                "Processed units: %{customdata[1]:,.0f}<br>"
+                "Leftover raw: %{customdata[2]:,.0f}<br>"
+                "Unit value: %{customdata[3]:,.1f}g<extra></extra>"
+            ),
         )
     )
-    _apply_chart_layout(figure, title=title, height=max(300, 96 + (len(names) * 36)))
+    figure.add_hline(y=0, line_color="#aebcca", line_dash="dot", line_width=1)
     figure.update_layout(
-        xaxis={
-            "automargin": True,
-            "fixedrange": True,
-            "gridcolor": "#e4ebf2",
-            "linecolor": "#c8d2dc",
-            "range": [min(0, min_value) - axis_padding, max(0, max_value) + axis_padding],
-            "showline": True,
-            "title": {"text": title, "standoff": 12},
-            "zeroline": True,
-            "zerolinecolor": "#aebcca",
-        }
-    )
-    return figure
-
-
-def _apply_chart_layout(figure: go.Figure, title: str, height: int) -> None:
-    figure.update_layout(
-        height=height,
-        margin={"l": 152, "r": 42, "t": 18, "b": 44},
+        height=max(350, 310 + (len(ranked) * 7)),
+        margin={"l": 66, "r": 38, "t": 22, "b": 58},
         font={"color": "#24384a", "family": "Inter, Segoe UI, sans-serif", "size": 12},
         hoverlabel={"bgcolor": "#143047", "bordercolor": "#143047", "font": {"color": "#ffffff", "size": 12}},
         paper_bgcolor="rgba(0,0,0,0)",
@@ -504,15 +532,102 @@ def _apply_chart_layout(figure: go.Figure, title: str, height: int) -> None:
             "gridcolor": "#e4ebf2",
             "linecolor": "#c8d2dc",
             "showline": True,
-            "title": {"text": title, "standoff": 12},
+            "title": {"text": "Total Revenue", "standoff": 12},
+            "ticksuffix": "g",
+            "zeroline": False,
+        },
+        yaxis={
+            "automargin": True,
+            "fixedrange": True,
+            "gridcolor": "#e4ebf2",
+            "linecolor": "#c8d2dc",
+            "showline": True,
+            "title": {"text": "Extra Gold vs Raw", "standoff": 12},
+            "ticksuffix": "g",
+            "zeroline": False,
+        },
+    )
+    return figure
+
+
+def _build_utilization_chart(evaluated: list[dict]) -> go.Figure:
+    methods = [item for item in evaluated if item["equipment"] != EQUIPMENT_NONE and item["machine_cycles"] > 0]
+    if not methods:
+        return _empty_figure("No available machine cycles for this crop and setup.")
+
+    methods = sorted(methods, key=lambda item: item["processed_batches"] / item["machine_cycles"], reverse=True)
+    labels = [_short_method_label(item) for item in methods]
+    used = [item["processed_batches"] for item in methods]
+    idle = [max(0, item["machine_cycles"] - item["processed_batches"]) for item in methods]
+    utilization = [(item["processed_batches"] / item["machine_cycles"]) * 100 for item in methods]
+
+    figure = go.Figure()
+    figure.add_trace(
+        go.Bar(
+            name="Used cycles",
+            y=labels,
+            x=used,
+            orientation="h",
+            marker={"color": "#1497ee", "line": {"color": "#ffffff", "width": 1}},
+            text=[f"{value:,.0f}" for value in used],
+            textposition="inside",
+            insidetextanchor="middle",
+            customdata=utilization,
+            hovertemplate="%{y}<br>Used cycles: %{x:,.0f}<br>Utilization: %{customdata:.0f}%<extra></extra>",
+        )
+    )
+    figure.add_trace(
+        go.Bar(
+            name="Idle cycles",
+            y=labels,
+            x=idle,
+            orientation="h",
+            marker={"color": "rgba(184, 197, 208, 0.45)", "line": {"color": "#ffffff", "width": 1}},
+            text=[f"{value:,.0f}" if value else "" for value in idle],
+            textposition="inside",
+            insidetextanchor="middle",
+            hovertemplate="%{y}<br>Idle cycles: %{x:,.0f}<extra></extra>",
+        )
+    )
+    figure.add_trace(
+        go.Scatter(
+            name="Utilization",
+            x=[item["machine_cycles"] for item in methods],
+            y=labels,
+            mode="markers+text",
+            marker={"size": 13, "color": "#23a67a", "line": {"color": "#ffffff", "width": 2}},
+            text=[f"{value:.0f}%" for value in utilization],
+            textposition="middle right",
+            hovertemplate="%{y}<br>Total cycles: %{x:,.0f}<extra></extra>",
+        )
+    )
+    figure.update_layout(
+        barmode="stack",
+        height=max(330, 116 + (len(methods) * 54)),
+        margin={"l": 118, "r": 62, "t": 22, "b": 50},
+        font={"color": "#24384a", "family": "Inter, Segoe UI, sans-serif", "size": 12},
+        hoverlabel={"bgcolor": "#143047", "bordercolor": "#143047", "font": {"color": "#ffffff", "size": 12}},
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        legend={"orientation": "h", "x": 0, "y": 1.08, "font": {"size": 11}},
+        xaxis={
+            "automargin": True,
+            "fixedrange": True,
+            "gridcolor": "#e4ebf2",
+            "linecolor": "#c8d2dc",
+            "showline": True,
+            "title": {"text": "Machine Cycles", "standoff": 12},
             "zeroline": False,
         },
         yaxis={"automargin": True, "fixedrange": True, "autorange": "reversed", "tickfont": {"size": 12}},
     )
+    return figure
 
 
 def _build_recommendation(row: dict, raw_units: float, best: dict) -> list[object]:
     equipment = EQUIPMENT_LABELS.get(best["equipment"], best["equipment"])
+    processed_share = 0 if raw_units <= 0 else min(100, (best["processed_units"] / raw_units) * 100)
+    leftover_share = max(0, 100 - processed_share)
     return [
         html.Div(
             className="processing-recommendation-head",
@@ -533,6 +648,32 @@ def _build_recommendation(row: dict, raw_units: float, best: dict) -> list[objec
             ],
         ),
         html.Div(
+            className="processing-flow-summary",
+            children=[
+                html.Div(
+                    className="processing-flow-item",
+                    children=[
+                        html.Span("Processed share", className="metric-label"),
+                        html.Strong(f"{processed_share:.0f}%", className="metric-value"),
+                    ],
+                ),
+                html.Div(
+                    className="processing-flow-item",
+                    children=[
+                        html.Span("Leftover raw", className="metric-label"),
+                        html.Strong(f"{leftover_share:.0f}%", className="metric-value"),
+                    ],
+                ),
+                html.Div(
+                    className="processing-flow-item",
+                    children=[
+                        html.Span("Revenue lift", className="metric-label"),
+                        html.Strong(f"{best['extra_revenue']:,.0f}g", className="metric-value"),
+                    ],
+                ),
+            ],
+        ),
+        html.Div(
             className="metric-grid processing-metric-grid",
             children=[
                 _metric_tile("Crop", row["crop_name"]),
@@ -544,6 +685,16 @@ def _build_recommendation(row: dict, raw_units: float, best: dict) -> list[objec
             ],
         ),
     ]
+
+
+def _short_method_label(method: dict) -> str:
+    if method["method_id"] == "raw":
+        return "Raw"
+    return method["method_name"]
+
+
+def _method_label(method: dict) -> str:
+    return f"{method['method_name']} ({method['product_name']})"
 
 
 def _metric_tile(label: str, value: str) -> html.Div:
@@ -605,7 +756,3 @@ def _safe_int(value: object, default: int = 0) -> int:
         return max(0, int(value))
     except (TypeError, ValueError):
         return default
-
-
-def _method_label(method: dict) -> str:
-    return f"{method['method_name']} ({method['product_name']})"
