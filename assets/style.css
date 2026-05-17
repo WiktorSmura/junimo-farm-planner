@@ -1,0 +1,157 @@
+:root {
+  --bg: #f4efe3;
+  --panel: #fffaf0;
+  --panel-strong: #f7f0dd;
+  --text: #22301f;
+  --muted: #5e6a57;
+  --accent: #537a45;
+  --accent-2: #d59b2d;
+  --border: #d9cfbe;
+  --shadow: 0 18px 40px rgba(40, 42, 33, 0.09);
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(213, 155, 45, 0.18), transparent 28%),
+    radial-gradient(circle at top right, rgba(83, 122, 69, 0.15), transparent 26%),
+    linear-gradient(180deg, #fbf7ee 0%, var(--bg) 100%);
+  font-family: "Georgia", "Times New Roman", serif;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+#react-entry-point,
+.dash-debug-menu,
+.dash-app {
+  min-height: 100vh;
+}
+
+.app-shell {
+  width: min(1180px, calc(100vw - 32px));
+  margin: 0 auto;
+  padding: 18px 0 40px;
+}
+
+.app-header {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  padding: 22px 24px;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  background: linear-gradient(135deg, rgba(255, 250, 240, 0.96), rgba(247, 240, 221, 0.88));
+  box-shadow: var(--shadow);
+}
+
+.app-logo {
+  width: 64px;
+  height: 64px;
+  flex: 0 0 auto;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  font-size: 0.82rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.app-header h1,
+.page-card h2 {
+  margin: 0;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+}
+
+.app-header h1 {
+  font-size: clamp(2rem, 4vw, 3.1rem);
+}
+
+.app-tagline {
+  margin: 8px 0 0;
+  max-width: 62ch;
+  color: var(--muted);
+  line-height: 1.5;
+  font-size: 1.02rem;
+}
+
+.app-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 16px 4px 0;
+}
+
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 250, 240, 0.82);
+  color: var(--text);
+  box-shadow: 0 6px 16px rgba(40, 42, 33, 0.05);
+}
+
+.nav-link:hover {
+  background: #fffdf8;
+  text-decoration: none;
+}
+
+.page-container {
+  padding-top: 18px;
+}
+
+.page-card {
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: rgba(255, 250, 240, 0.92);
+  box-shadow: var(--shadow);
+}
+
+.page-card p,
+.page-card li {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(83, 122, 69, 0.12);
+  color: var(--accent);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 720px) {
+  .app-shell {
+    width: min(100vw - 20px, 1180px);
+    padding-top: 10px;
+  }
+
+  .app-header {
+    align-items: flex-start;
+    padding: 18px;
+  }
+
+  .app-logo {
+    width: 52px;
+    height: 52px;
+  }
+}
