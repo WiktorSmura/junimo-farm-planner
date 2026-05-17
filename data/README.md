@@ -88,3 +88,16 @@ This reads the raw crop files, applies the game-rule corrections, and writes `da
 - probabilistic extra-yield behavior is not modeled in baseline calculations
 - processing values are not present in the source dataset
 - `affordable`, `will_mature`, and `first_harvest_day` will later depend on user inputs
+
+## Processing Rules
+
+The raw dataset does not include crop item categories or processing outputs. The app therefore uses curated metadata in `src/constants.py` and processing formulas in `src/processing_math.py`.
+
+Modeled machines:
+
+- Keg: wine, juice, coffee, green tea, beer, and pale ale
+- Preserves Jar: jelly and pickles
+- Mill: wheat flour, sugar, and rice
+- Oil Maker: oil from corn or sunflower
+
+Out of scope for the current processing model: crop quality, Tiller, casks/aging, dehydrator, seed maker, cooking recipes, fish roe, mushrooms, honey, truffles, and exact harvest-day processing queues.

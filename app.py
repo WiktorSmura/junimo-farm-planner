@@ -4,7 +4,6 @@ from dash import Dash, Input, Output, callback, dcc, html, page_container
 from src.dashboard_state import (
     DEFAULT_FILTERS,
     FERTILIZER_OPTIONS,
-    PROCESSING_OPTIONS,
     SEASON_OPTIONS,
     build_filtered_snapshot,
 )
@@ -100,7 +99,7 @@ app.layout = html.Div(
                                     className="control-panel-header",
                                     children=[
                                         html.H2("Farm Context"),
-                                        html.P("Season, timing, budget, processing, and crop search."),
+                                        html.P("Season, timing, budget, farm size, and growth profile."),
                                     ],
                                 ),
                                 html.Div(
@@ -153,16 +152,6 @@ app.layout = html.Div(
                                             "Gold for seeds",
                                         ),
                                         _control_field(
-                                            "Processing mode",
-                                            dcc.Dropdown(
-                                                id="processing-control",
-                                                options=PROCESSING_OPTIONS,
-                                                value=DEFAULT_FILTERS["processing_mode"],
-                                                clearable=False,
-                                            ),
-                                            "Value uplift profile",
-                                        ),
-                                        _control_field(
                                             "Fertilizer",
                                             dcc.Dropdown(
                                                 id="fertilizer-control",
@@ -171,17 +160,6 @@ app.layout = html.Div(
                                                 clearable=False,
                                             ),
                                             "Growth-speed profile",
-                                        ),
-                                        _control_field(
-                                            "Search crop",
-                                            dcc.Input(
-                                                id="crop-search-control",
-                                                type="text",
-                                                value=DEFAULT_FILTERS["search_term"],
-                                                placeholder="Search crop",
-                                                className="control-input",
-                                            ),
-                                            "Filters all crop views",
                                         ),
                                     ],
                                 ),
@@ -219,18 +197,14 @@ app.layout = html.Div(
     Input("day-control", "value"),
     Input("tiles-control", "value"),
     Input("budget-control", "value"),
-    Input("processing-control", "value"),
     Input("fertilizer-control", "value"),
-    Input("crop-search-control", "value"),
 )
 def sync_shared_state(
     season: str,
     day: int,
     tiles: int,
     budget: float | None,
-    processing_mode: str,
     fertilizer: str,
-    search_term: str,
 ):
     snapshot = build_filtered_snapshot(
         season=season,
@@ -238,9 +212,7 @@ def sync_shared_state(
         tiles=tiles,
         budget=budget,
         goal=None,
-        processing_mode=processing_mode,
         fertilizer=fertilizer,
-        search_term=search_term,
     )
 
     summary_nodes = [html.P(snapshot["summary"], className="control-summary-text")]

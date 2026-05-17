@@ -642,6 +642,132 @@ a:hover {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.processing-recommendation-section {
+  padding-top: 18px;
+  border-top: 0;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.processing-recommendation {
+  display: grid;
+  gap: 16px;
+}
+
+.processing-page .page-head {
+  border-bottom: 0;
+  padding-bottom: 14px;
+}
+
+.processing-recommendation-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 8px;
+}
+
+.processing-recommendation-head h3 {
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-size: 1.08rem;
+}
+
+.processing-recommendation-total {
+  display: grid;
+  min-width: 170px;
+  justify-items: end;
+  gap: 3px;
+}
+
+.processing-recommendation-total span {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.processing-recommendation-total strong {
+  color: var(--accent-strong);
+  font-size: 1.62rem;
+  line-height: 1;
+}
+
+.processing-controls-section {
+  padding-top: 18px;
+  padding-bottom: 20px;
+}
+
+.processing-control-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.45fr) repeat(3, minmax(96px, 0.5fr)) minmax(250px, 1fr);
+  gap: 16px;
+  align-items: end;
+}
+
+.processing-crop-field {
+  min-width: 0;
+}
+
+.processing-horizon-field {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+  padding: 12px 14px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+}
+
+.processing-toggle-row {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  min-height: 36px;
+  padding: 2px 0;
+}
+
+.processing-toggle-row .inline-checklist-label {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+}
+
+.processing-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 26px;
+  margin-bottom: 26px;
+}
+
+.processing-chart-wide {
+  grid-column: 1 / -1;
+}
+
+.processing-metric-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.processing-note {
+  margin: 12px 0 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.processing-page .plan-section {
+  overflow: hidden;
+}
+
+.processing-page .dash-graph {
+  margin-top: 8px;
+  padding-top: 2px;
+}
+
 .metric-delta {
   display: block;
   margin-top: 5px;
@@ -821,6 +947,14 @@ a:hover {
     grid-template-columns: 1fr;
   }
 
+  .processing-control-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .processing-chart-grid {
+    grid-template-columns: 1fr;
+  }
+
   .plan-grid {
     grid-template-columns: minmax(0, 1fr) minmax(260px, 0.8fr);
   }
@@ -878,6 +1012,14 @@ a:hover {
   .plan-grid {
     grid-template-columns: 1fr;
   }
+
+  .processing-recommendation-head {
+    display: grid;
+  }
+
+  .processing-recommendation-total {
+    justify-items: start;
+  }
 }
 
 @media (max-width: 640px) {
@@ -904,6 +1046,8 @@ a:hover {
   .plan-cards,
   .explorer-control-grid,
   .explorer-metric-grid,
+  .processing-control-grid,
+  .processing-metric-grid,
   .metric-grid {
     grid-template-columns: 1fr;
   }

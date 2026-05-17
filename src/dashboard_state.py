@@ -16,12 +16,6 @@ GOAL_OPTIONS = [
     {"label": "Fastest first harvest", "value": "time_to_first_harvest"},
 ]
 
-PROCESSING_OPTIONS = [
-    {"label": "Raw sale", "value": "raw"},
-    {"label": "Basic processing", "value": "basic"},
-    {"label": "Artisan focus", "value": "artisan"},
-]
-
 FERTILIZER_OPTIONS = [
     {"label": "None", "value": "none"},
     {"label": "Speed-Gro (approx)", "value": "speed_gro"},
@@ -33,13 +27,10 @@ DEFAULT_FILTERS = {
     "current_day": 1,
     "tiles": 80,
     "budget": 5000.0,
-    "processing_mode": "raw",
     "fertilizer": "none",
-    "search_term": "",
 }
 
 _GOAL_VALUES = {option["value"] for option in GOAL_OPTIONS}
-_PROCESSING_MULTIPLIER = {"raw": 1.0, "basic": 1.25, "artisan": 1.5}
 _FERTILIZER_GROWTH_FACTOR = {"none": 1.0, "speed_gro": 0.9, "deluxe_speed_gro": 0.75}
 _CROPS_DF = load_clean_crops()
 
@@ -50,9 +41,7 @@ def build_filtered_snapshot(
     tiles: int | None,
     budget: float | int | str | None,
     goal: str | None,
-    processing_mode: str | None,
     fertilizer: str | None,
-    search_term: str | None,
 ) -> dict[str, Any]:
     normalized = _normalize_filters(
         season=season,
@@ -60,9 +49,7 @@ def build_filtered_snapshot(
         tiles=tiles,
         budget=budget,
         goal=goal,
-        processing_mode=processing_mode,
         fertilizer=fertilizer,
-        search_term=search_term,
     )
 
     rows: list[dict[str, Any]] = []
@@ -72,9 +59,6 @@ def build_filtered_snapshot(
     for _, crop in _CROPS_DF.iterrows():
         seasons_list = crop["seasons_list"] if isinstance(crop["seasons_list"], list) else []
         if season_name not in seasons_list:
-            continue
-
-        if normalized["search_term"] and normalized["search_term"] not in str(crop["crop_name"]).lower():
             continue
 
         window_days = _remaining_window_days(
@@ -90,7 +74,7 @@ def build_filtered_snapshot(
             1,
             math.ceil(growth_days * _FERTILIZER_GROWTH_FACTOR[normalized["fertilizer"]]),
         )
-        adjusted_sell_price = float(crop["sell_price_raw"]) * _PROCESSING_MULTIPLIER[normalized["processing_mode"]]
+        adjusted_sell_price = float(crop["sell_price_raw"])
         regrowth_days = int(crop["regrowth_days"])
 
         metrics = compute_crop_profit(
@@ -123,6 +107,7 @@ def build_filtered_snapshot(
             "seed_price": float(crop["seed_price"]),
             "sell_price_raw": float(crop["sell_price_raw"]),
             "sell_price_effective": adjusted_sell_price,
+            "base_yield": float(crop["base_yield"]),
             "harvest_count": int(metrics["harvest_count"]),
             "revenue": float(metrics["revenue"]),
             "seed_cost": float(metrics["seed_cost"]),
@@ -159,9 +144,7 @@ def _normalize_filters(
     tiles: int | None,
     budget: float | int | str | None,
     goal: str | None,
-    processing_mode: str | None,
     fertilizer: str | None,
-    search_term: str | None,
 ) -> dict[str, Any]:
     normalized = dict(DEFAULT_FILTERS)
     normalized["goal"] = "profit_per_day"
@@ -181,13 +164,9 @@ def _normalize_filters(
     if goal in _GOAL_VALUES:
         normalized["goal"] = goal
 
-    if processing_mode in _PROCESSING_MULTIPLIER:
-        normalized["processing_mode"] = processing_mode
-
     if fertilizer in _FERTILIZER_GROWTH_FACTOR:
         normalized["fertilizer"] = fertilizer
 
-    normalized["search_term"] = str(search_term or "").strip().lower()
     return normalized
 
 

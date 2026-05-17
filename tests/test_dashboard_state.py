@@ -1,20 +1,18 @@
 from src.dashboard_state import build_filtered_snapshot
 
 
-def test_snapshot_filters_by_season_and_search():
+def test_snapshot_filters_by_season():
     snapshot = build_filtered_snapshot(
         season="Summer",
         current_day=1,
         tiles=40,
         budget=5000,
         goal="profit_per_day",
-        processing_mode="raw",
         fertilizer="none",
-        search_term="corn",
     )
 
     assert snapshot["rows"]
-    assert all(row["crop_name"] == "Corn" for row in snapshot["rows"])
+    assert all("Summer" in row["season"] or row["season"] == "Any" for row in snapshot["rows"])
 
 
 def test_snapshot_day_changes_feasibility():
@@ -24,9 +22,7 @@ def test_snapshot_day_changes_feasibility():
         tiles=80,
         budget=5000,
         goal="profit_total",
-        processing_mode="raw",
         fertilizer="none",
-        search_term="cauliflower",
     )
     late = build_filtered_snapshot(
         season="Spring",
@@ -34,13 +30,13 @@ def test_snapshot_day_changes_feasibility():
         tiles=80,
         budget=5000,
         goal="profit_total",
-        processing_mode="raw",
         fertilizer="none",
-        search_term="cauliflower",
     )
 
-    assert early["rows"][0]["can_mature"] is True
-    assert late["rows"][0]["can_mature"] is False
+    early_cauli = next(row for row in early["rows"] if row["crop_name"] == "Cauliflower")
+    late_cauli = next(row for row in late["rows"] if row["crop_name"] == "Cauliflower")
+    assert early_cauli["can_mature"] is True
+    assert late_cauli["can_mature"] is False
 
 
 def test_snapshot_budget_changes_affordability():
@@ -50,9 +46,7 @@ def test_snapshot_budget_changes_affordability():
         tiles=20,
         budget=5000,
         goal="profit_per_day",
-        processing_mode="raw",
         fertilizer="none",
-        search_term="melon",
     )
     over_budget = build_filtered_snapshot(
         season="Summer",
@@ -60,13 +54,13 @@ def test_snapshot_budget_changes_affordability():
         tiles=20,
         budget=100,
         goal="profit_per_day",
-        processing_mode="raw",
         fertilizer="none",
-        search_term="melon",
     )
 
-    assert affordable["rows"][0]["affordable"] is True
-    assert over_budget["rows"][0]["affordable"] is False
+    affordable_melon = next(row for row in affordable["rows"] if row["crop_name"] == "Melon")
+    over_budget_melon = next(row for row in over_budget["rows"] if row["crop_name"] == "Melon")
+    assert affordable_melon["affordable"] is True
+    assert over_budget_melon["affordable"] is False
 
 
 def test_snapshot_invalid_inputs_are_handled():
@@ -76,9 +70,7 @@ def test_snapshot_invalid_inputs_are_handled():
         tiles="y",
         budget="oops",
         goal="unknown-goal",
-        processing_mode="unknown-processing",
         fertilizer="unknown-fertilizer",
-        search_term=None,
     )
 
     assert snapshot["rows"]
