@@ -1,6 +1,6 @@
 import pytest
 
-from src.farm_math import can_mature, compute_crop_profit, compute_harvest_count, days_left_in_season
+from src.farm_math import can_mature, compute_crop_profit, compute_harvest_count, compute_harvest_schedule, days_left_in_season
 
 
 def test_days_left_in_season_handles_edges():
@@ -26,7 +26,7 @@ def test_compute_harvest_count_non_regrowing_replant_model():
 
 
 def test_compute_harvest_count_regrowing():
-    assert compute_harvest_count(current_day=1, growth_days=10, regrowth_days=3) == 7
+    assert compute_harvest_count(current_day=1, growth_days=10, regrowth_days=3) == 6
     assert compute_harvest_count(current_day=20, growth_days=12, regrowth_days=4) == 0
 
 
@@ -59,11 +59,11 @@ def test_compute_crop_profit_regrowing():
         tiles=10,
     )
 
-    assert result["harvest_count"] == 7
+    assert result["harvest_count"] == 6
     assert result["seed_cost"] == 600.0
-    assert result["revenue"] == 2800.0
-    assert result["profit"] == 2200.0
-    assert result["roi"] == pytest.approx(2200.0 / 600.0)
+    assert result["revenue"] == 2400.0
+    assert result["profit"] == 1800.0
+    assert result["roi"] == pytest.approx(1800.0 / 600.0)
 
 
 def test_compute_crop_profit_handles_zero_tiles_and_unmatured_crop():
@@ -113,3 +113,27 @@ def test_compute_crop_profit_budget_flag():
         budget=200,
     )
     assert affordable["affordable"] is True
+
+
+def test_compute_harvest_schedule_matches_count():
+    schedule = compute_harvest_schedule(
+        seed_price=20,
+        sell_price=50,
+        growth_days=4,
+        regrowth_days=None,
+        current_day=1,
+        tiles=10,
+    )
+    harvests = [e for e in schedule if e["event"] == "Harvest"]
+    assert len(harvests) == 7
+
+    schedule_regrow = compute_harvest_schedule(
+        seed_price=60,
+        sell_price=40,
+        growth_days=10,
+        regrowth_days=3,
+        current_day=1,
+        tiles=10,
+    )
+    harvests_regrow = [e for e in schedule_regrow if e["event"] == "Harvest"]
+    assert len(harvests_regrow) == 6

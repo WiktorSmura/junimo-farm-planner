@@ -34,9 +34,9 @@ def compute_harvest_count(
     if regrowth_days is None or regrowth_days < 1:
         return days_left // growth_days
 
-    if growth_days > days_left:
+    if growth_days >= days_left:
         return 0
-    return 1 + ((days_left - growth_days) // regrowth_days)
+    return 1 + ((days_left - growth_days - 1) // regrowth_days)
 
 
 def compute_crop_profit(
@@ -98,3 +98,95 @@ def _empty_profit_result(days_left: int, budget: float | None) -> dict[str, Any]
         "seed_cost_model": "replant_non_regrow_once_for_regrow",
         "affordable": None if budget is None else True,
     }
+
+
+def compute_harvest_schedule(
+    seed_price: float,
+    sell_price: float,
+    growth_days: int,
+    regrowth_days: int | None,
+    current_day: int,
+    tiles: int,
+    yield_per_harvest: float = 1.0,
+    season_length: int = 28,
+) -> list[dict[str, Any]]:
+    schedule = []
+    days_left = days_left_in_season(current_day=current_day, season_length=season_length)
+    if days_left < 1 or growth_days < 1 or tiles < 1:
+        return schedule
+
+    harvest_count = compute_harvest_count(
+        current_day=current_day,
+        growth_days=growth_days,
+        regrowth_days=regrowth_days,
+        season_length=season_length,
+    )
+
+    if harvest_count < 1:
+        return schedule
+
+    is_regrowing = regrowth_days is not None and regrowth_days > 0
+    total_cost = 0.0
+    total_revenue = 0.0
+    cost_per_planting = seed_price * tiles
+    rev_per_harvest = sell_price * tiles * yield_per_harvest
+
+    day = current_day
+
+    if is_regrowing:
+        # One-time planting
+        total_cost += cost_per_planting
+        schedule.append(
+            {
+                "day": day,
+                "event": "Plant",
+                "revenue": 0.0,
+                "cost": cost_per_planting,
+                "profit": -cost_per_planting,
+                "cumulative_profit": total_revenue - total_cost,
+            }
+        )
+        harvest_day = day + growth_days
+        for _ in range(harvest_count):
+            total_revenue += rev_per_harvest
+            schedule.append(
+                {
+                    "day": harvest_day,
+                    "event": "Harvest",
+                    "revenue": rev_per_harvest,
+                    "cost": 0.0,
+                    "profit": rev_per_harvest,
+                    "cumulative_profit": total_revenue - total_cost,
+                }
+            )
+            harvest_day += regrowth_days
+    else:
+        # Replanting non-regrowing crops
+        harvest_day = day + growth_days
+        for _ in range(harvest_count):
+            total_cost += cost_per_planting
+            schedule.append(
+                {
+                    "day": day,
+                    "event": "Plant",
+                    "revenue": 0.0,
+                    "cost": cost_per_planting,
+                    "profit": -cost_per_planting,
+                    "cumulative_profit": total_revenue - total_cost,
+                }
+            )
+            total_revenue += rev_per_harvest
+            schedule.append(
+                {
+                    "day": harvest_day,
+                    "event": "Harvest",
+                    "revenue": rev_per_harvest,
+                    "cost": 0.0,
+                    "profit": rev_per_harvest,
+                    "cumulative_profit": total_revenue - total_cost,
+                }
+            )
+            day = harvest_day
+            harvest_day = day + growth_days
+
+    return schedule
