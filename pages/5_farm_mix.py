@@ -168,9 +168,16 @@ layout = html.Div(
                     columns=TABLE_COLUMNS,
                     data=[],
                     sort_action="native",
-                    page_size=10,
+                    page_action="none",
+                    fixed_rows={"headers": True},
                     style_as_list_view=True,
-                    style_table={"overflowX": "auto", "width": "100%", "maxWidth": "100%"},
+                    style_table={
+                        "overflowX": "auto",
+                        "overflowY": "auto",
+                        "maxHeight": "420px",
+                        "width": "100%",
+                        "maxWidth": "100%",
+                    },
                     style_cell={
                         "fontFamily": "Inter, Segoe UI, sans-serif",
                         "fontSize": 13,

@@ -39,6 +39,12 @@ body {
   font-family: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
 
+.dash-spreadsheet,
+.dash-spreadsheet-container,
+.dash-spreadsheet-inner {
+  overscroll-behavior: contain;
+}
+
 a {
   color: var(--accent-strong);
   text-decoration: none;

@@ -209,10 +209,23 @@ def save_clean_crops(df: pd.DataFrame, path: Path | str | None = None) -> Path:
     return target
 
 
+_OPTIONAL_STRING_COLUMNS = (
+    "description",
+    "rule_note",
+    "special_harvest_model",
+    "yield_note",
+    "seed_price_model",
+    "farm_context",
+)
+
+
 def _read_clean_crops(path: Path) -> pd.DataFrame:
     df = pd.read_csv(path)
     if "seasons_list" in df.columns:
         df["seasons_list"] = df["seasons_list"].map(_parse_seasons_list)
+    for column in _OPTIONAL_STRING_COLUMNS:
+        if column in df.columns:
+            df[column] = df[column].fillna("").astype(str)
     return df
 
 

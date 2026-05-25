@@ -124,9 +124,15 @@ layout = html.Div(
                             ],
                             data=[],
                             sort_action="native",
-                            page_size=10,
+                            page_action="none",
+                            fixed_rows={"headers": True},
                             style_as_list_view=True,
-                            style_table={"overflowX": "auto", "width": "100%"},
+                            style_table={
+                                "overflowX": "auto",
+                                "overflowY": "auto",
+                                "maxHeight": "420px",
+                                "width": "100%",
+                            },
                             style_cell={
                                 "fontFamily": "Inter, Segoe UI, sans-serif",
                                 "fontSize": 13,
@@ -172,7 +178,9 @@ def update_crop_options(filtered_data, current_selection):
 @callback(
     Output("calendar-warnings", "children"),
     Output("calendar-gantt", "figure"),
+    Output("calendar-gantt", "style"),
     Output("calendar-heatmap", "figure"),
+    Output("calendar-heatmap", "style"),
     Output("calendar-profit-chart", "figure"),
     Output("calendar-event-table", "data"),
     Input("calendar-crop-select", "value"),
@@ -182,7 +190,15 @@ def update_crop_options(filtered_data, current_selection):
 )
 def update_calendar_views(selected_crops, rows, current_day, tiles):
     if not rows or not selected_crops:
-        return html.Div(), go.Figure(), go.Figure(), go.Figure(), []
+        return (
+            html.Div(),
+            go.Figure(),
+            {"height": "300px"},
+            go.Figure(),
+            {"height": "350px"},
+            go.Figure(),
+            [],
+        )
 
     # Limit to up to 3 crops
     selected_crops = selected_crops[:3]
@@ -239,7 +255,15 @@ def update_calendar_views(selected_crops, rows, current_day, tiles):
             )
 
     if not events_data:
-        return warnings, go.Figure(), go.Figure(), go.Figure(), []
+        return (
+            warnings,
+            go.Figure(),
+            {"height": "300px"},
+            go.Figure(),
+            {"height": "350px"},
+            go.Figure(),
+            [],
+        )
 
     df_events = pd.DataFrame(events_data)
 
@@ -313,8 +337,9 @@ def update_calendar_views(selected_crops, rows, current_day, tiles):
         )
         shown_harvest_legend = True
 
+    gantt_height = max(300, 120 + (len(selected_crops) * 60))
     fig_gantt.update_layout(
-        **base_layout(height=max(300, 120 + (len(selected_crops) * 60)), margin={"l": 118, "r": 26, "t": 34, "b": 48}),
+        **base_layout(height=gantt_height, margin={"l": 118, "r": 26, "t": 34, "b": 48}),
         xaxis={**axis_style("Day"), "range": [1, max_day], "dtick": max(1, max_day // 14)},
         yaxis={"fixedrange": True, "title": "", "tickfont": {"color": CHART_COLORS["ink"], "size": 12}},
         showlegend=True,
@@ -418,8 +443,9 @@ def update_calendar_views(selected_crops, rows, current_day, tiles):
         )
     )
 
+    heatmap_height = max(350, 120 + weeks * 48)
     fig_heatmap.update_layout(
-        **base_layout(height=max(350, 120 + weeks * 48), margin={"l": 58, "r": 24, "t": 18, "b": 42}),
+        **base_layout(height=heatmap_height, margin={"l": 58, "r": 24, "t": 18, "b": 42}),
         xaxis={"title": "Day in Week", "fixedrange": True, "side": "top"},
         yaxis={"title": "", "fixedrange": True},
     )
@@ -437,4 +463,12 @@ def update_calendar_views(selected_crops, rows, current_day, tiles):
             }
         )
 
-    return warnings, fig_gantt, fig_heatmap, fig_profit, table_data
+    return (
+        warnings,
+        fig_gantt,
+        {"height": f"{gantt_height}px"},
+        fig_heatmap,
+        {"height": f"{heatmap_height}px"},
+        fig_profit,
+        table_data,
+    )
