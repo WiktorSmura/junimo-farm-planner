@@ -3,6 +3,8 @@ from __future__ import annotations
 import plotly.graph_objects as go
 from dash import Input, Output, State, callback, dash_table, dcc, html, no_update, register_page
 
+from src.figures import CHART_COLORS, axis_style, base_layout
+
 register_page(__name__, path="/", name="Plan Today", order=1)
 
 METRIC_OPTIONS = [
@@ -352,12 +354,22 @@ def _build_leaderboard(rows: list[dict], selected_crop_id: str, metric: str, top
     ranked = ranked[: max(3, int(top_n))]
 
     metric_label = METRIC_LABELS.get(metric, metric.replace("_", " ").title())
-    colors = ["#1497ee" if row["crop_id"] == selected_crop_id else "#b8c5d0" for row in ranked]
-    opacities = [1.0 if row["crop_id"] == selected_crop_id else 0.62 for row in ranked]
+    colors = [CHART_COLORS["gold"] if row["crop_id"] == selected_crop_id else CHART_COLORS["green"] for row in ranked]
+    opacities = [1.0 if row["crop_id"] == selected_crop_id else 0.58 for row in ranked]
     values = [row[metric] for row in ranked]
     names = [row["crop_name"] for row in ranked]
     text_values = [_format_metric_value(value, metric) for value in values]
-    custom_data = [[row["crop_id"], row["crop_name"], row["profit_total"], row["profit_per_day"]] for row in ranked]
+    custom_data = [
+        [
+            row["crop_id"],
+            row["crop_name"],
+            row["profit_total"],
+            row["profit_per_day"],
+            row["harvest_count"],
+            row["seed_cost"],
+        ]
+        for row in ranked
+    ]
     max_value = max(values) if values else 1
     chart_height = min(560, max(320, 120 + len(ranked) * 38))
 
@@ -371,33 +383,26 @@ def _build_leaderboard(rows: list[dict], selected_crop_id: str, metric: str, top
                 "<b>%{customdata[1]}</b><br>"
                 f"{metric_label}: %{{text}}<br>"
                 "Total profit: %{customdata[2]:,.0f}g<br>"
-                "Profit/day: %{customdata[3]:,.1f}g<extra>Click to select</extra>"
+                "Profit/day: %{customdata[3]:,.1f}g<br>"
+                "Harvests: %{customdata[4]}<br>"
+                "Seed cost: %{customdata[5]:,.0f}g<extra>Click to select</extra>"
             ),
             marker={
                 "color": colors,
-                "line": {"color": "#ffffff", "width": 1},
+                "line": {"color": CHART_COLORS["cream"], "width": 1},
                 "opacity": opacities,
             },
             text=text_values,
             textposition="auto",
-            textfont={"color": "#143047", "size": 12},
+            textfont={"color": CHART_COLORS["ink"], "size": 12},
             cliponaxis=True,
         )
     )
     figure.update_layout(
+        **base_layout(height=chart_height, margin={"l": 132, "r": 92, "t": 18, "b": 54}),
         bargap=0.36,
         dragmode=False,
-        height=chart_height,
-        hoverlabel={
-            "bgcolor": "#143047",
-            "bordercolor": "#143047",
-            "font": {"color": "#ffffff", "family": "Inter, Segoe UI, sans-serif", "size": 12},
-        },
-        margin={"l": 118, "r": 84, "t": 18, "b": 44},
         autosize=True,
-        font={"color": "#24313f", "family": "Inter, Segoe UI, sans-serif", "size": 12},
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
         showlegend=False,
         transition={"duration": 180},
         yaxis={
@@ -405,18 +410,11 @@ def _build_leaderboard(rows: list[dict], selected_crop_id: str, metric: str, top
             "automargin": True,
             "fixedrange": True,
             "showgrid": False,
-            "tickfont": {"color": "#143047", "size": 12},
+            "tickfont": {"color": CHART_COLORS["ink"], "size": 12},
         },
         xaxis={
-            "automargin": True,
-            "fixedrange": True,
-            "gridcolor": "#e4ebf2",
-            "linecolor": "#c8d2dc",
+            **axis_style(metric_label),
             "range": [0, max_value * 1.16 if max_value > 0 else 1],
-            "showline": True,
-            "tickfont": {"color": "#536679", "size": 11},
-            "title": {"text": metric_label, "standoff": 14},
-            "zeroline": False,
         },
     )
     return figure
@@ -518,7 +516,7 @@ def _build_budget_chart(row: dict, budget: float | None) -> go.Figure:
         y=["Budget"],
         x=[seed_bar],
         orientation="h",
-        marker_color="#1497ee",
+        marker_color=CHART_COLORS["green"],
         hovertemplate="Seed cost: %{x:,.0f}g<extra></extra>",
     )
     figure.add_bar(
@@ -526,7 +524,7 @@ def _build_budget_chart(row: dict, budget: float | None) -> go.Figure:
         y=["Budget"],
         x=[remaining_budget],
         orientation="h",
-        marker_color="#dfe7ee",
+        marker_color=CHART_COLORS["tan"],
         hovertemplate="Remaining: %{x:,.0f}g<extra></extra>",
     )
     if overspend > 0:
@@ -535,40 +533,25 @@ def _build_budget_chart(row: dict, budget: float | None) -> go.Figure:
             y=["Budget"],
             x=[overspend],
             orientation="h",
-            marker_color="#ff334a",
+            marker_color=CHART_COLORS["red"],
             hovertemplate="Over budget: %{x:,.0f}g<extra></extra>",
         )
 
     figure.update_layout(
+        **base_layout(height=190, margin={"l": 8, "r": 8, "t": 48, "b": 42}),
         barmode="stack",
-        height=180,
-        hoverlabel={
-            "bgcolor": "#143047",
-            "bordercolor": "#143047",
-            "font": {"color": "#ffffff", "family": "Inter, Segoe UI, sans-serif", "size": 12},
-        },
-        margin={"l": 8, "r": 8, "t": 44, "b": 42},
         autosize=True,
-        font={"color": "#24313f", "family": "Inter, Segoe UI, sans-serif", "size": 12},
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        title={"text": f"Seed Cost vs Budget ({seed_cost:,.0f}g / {max_budget:,.0f}g)", "x": 0, "xanchor": "left"},
+        title={"text": f"Budget Meter ({seed_cost:,.0f}g of {max_budget:,.0f}g used)", "x": 0, "xanchor": "left"},
         xaxis={
-            "fixedrange": True,
-            "gridcolor": "#e4ebf2",
-            "linecolor": "#c8d2dc",
+            **axis_style("Gold", ticksuffix="g"),
             "range": [0, max(seed_cost, max_budget) * 1.08],
-            "showline": True,
-            "tickfont": {"color": "#536679", "size": 11},
-            "title": {"text": "Gold", "standoff": 10},
-            "zeroline": False,
         },
         yaxis={"fixedrange": True, "showticklabels": False},
         showlegend=False,
     )
     figure.add_vline(
         x=max_budget,
-        line_color="#143047",
+        line_color=CHART_COLORS["ink"],
         line_dash="dot",
         line_width=1,
         opacity=0.55,

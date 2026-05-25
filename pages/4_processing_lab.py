@@ -3,6 +3,7 @@ from __future__ import annotations
 import plotly.graph_objects as go
 from dash import Input, Output, State, callback, dash_table, dcc, html, no_update, register_page
 
+from src.figures import CHART_COLORS, axis_style, base_layout
 from src.processing_math import (
     EQUIPMENT_KEG,
     EQUIPMENT_MILL,
@@ -390,11 +391,8 @@ def _build_value_ladder(methods: list[dict]) -> go.Figure:
             y=labels,
             orientation="h",
             marker={
-                "color": values,
-                "colorscale": [[0, "#dfe7ee"], [0.5, "#1497ee"], [1, "#23a67a"]],
-                "cmin": raw_value,
-                "cmax": max_value,
-                "line": {"color": "#ffffff", "width": 1},
+                "color": [_method_color(method) for method in ranked],
+                "line": {"color": CHART_COLORS["cream"], "width": 1},
             },
             width=0.58,
             text=[f"{value:,.0f}g" for value in values],
@@ -421,7 +419,7 @@ def _build_value_ladder(methods: list[dict]) -> go.Figure:
             x=[raw_value for _ in ranked],
             y=labels,
             mode="markers",
-            marker={"symbol": "line-ns-open", "size": 22, "color": "#143047", "line": {"width": 3}},
+            marker={"symbol": "line-ns-open", "size": 22, "color": CHART_COLORS["ink"], "line": {"width": 3}},
             name="Raw baseline",
             hovertemplate="Raw baseline: %{x:,.1f}g<extra></extra>",
         )
@@ -436,39 +434,27 @@ def _build_value_ladder(methods: list[dict]) -> go.Figure:
                 y1=label,
                 xref="x",
                 yref="y",
-                line={"color": "rgba(35, 166, 122, 0.22)", "width": 10},
+                line={"color": CHART_COLORS["tan"], "width": 10},
                 layer="below",
             )
 
     figure.add_vline(
         x=raw_value,
-        line_color="#143047",
+        line_color=CHART_COLORS["ink"],
         line_dash="dot",
         line_width=1,
         opacity=0.58,
         annotation_text="raw",
         annotation_position="top",
-        annotation_font={"size": 11, "color": "#536679"},
+        annotation_font={"size": 11, "color": CHART_COLORS["muted"]},
     )
     figure.update_layout(
-        height=max(360, 138 + (len(ranked) * 54)),
-        margin={"l": 126, "r": 72, "t": 24, "b": 54},
-        font={"color": "#24384a", "family": "Inter, Segoe UI, sans-serif", "size": 12},
-        hoverlabel={"bgcolor": "#143047", "bordercolor": "#143047", "font": {"color": "#ffffff", "size": 12}},
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
+        **base_layout(height=max(360, 138 + (len(ranked) * 54)), margin={"l": 126, "r": 72, "t": 24, "b": 54}),
         showlegend=False,
         bargap=0.38,
         xaxis={
-            "automargin": True,
-            "fixedrange": True,
-            "gridcolor": "#e4ebf2",
-            "linecolor": "#c8d2dc",
+            **axis_style("Gold per Raw Unit", ticksuffix="g"),
             "range": [max(0, min(values) - left_padding), max_value + right_padding],
-            "showline": True,
-            "title": {"text": "Gold per Raw Unit", "standoff": 12},
-            "ticksuffix": "g",
-            "zeroline": False,
         },
         yaxis={"automargin": True, "fixedrange": True, "autorange": "reversed", "tickfont": {"size": 12}},
     )
@@ -495,10 +481,10 @@ def _build_extra_chart(evaluated: list[dict]) -> go.Figure:
             marker={
                 "size": [max(18, min(56, 18 + (float(item["processed_units"]) / max_processed) * 38)) for item in ranked],
                 "color": [item["extra_revenue"] for item in ranked],
-                "colorscale": [[0, "#ff334a"], [0.45, "#f39c12"], [1, "#23a67a"]],
+                "colorscale": [[0, CHART_COLORS["red"]], [0.45, CHART_COLORS["gold"]], [1, CHART_COLORS["green"]]],
                 "cmin": min(0, min(item["extra_revenue"] for item in ranked)),
                 "cmax": max(1, max(item["extra_revenue"] for item in ranked)),
-                "line": {"color": "#ffffff", "width": 2},
+                "line": {"color": CHART_COLORS["cream"], "width": 2},
                 "opacity": 0.9,
                 "showscale": False,
             },
@@ -521,35 +507,12 @@ def _build_extra_chart(evaluated: list[dict]) -> go.Figure:
             ),
         )
     )
-    figure.add_hline(y=0, line_color="#aebcca", line_dash="dot", line_width=1)
+    figure.add_hline(y=0, line_color=CHART_COLORS["brown"], line_dash="dot", line_width=1)
     figure.update_layout(
-        height=max(350, 310 + (len(ranked) * 7)),
-        margin={"l": 66, "r": 38, "t": 22, "b": 58},
-        font={"color": "#24384a", "family": "Inter, Segoe UI, sans-serif", "size": 12},
-        hoverlabel={"bgcolor": "#143047", "bordercolor": "#143047", "font": {"color": "#ffffff", "size": 12}},
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
+        **base_layout(height=max(350, 310 + (len(ranked) * 7)), margin={"l": 66, "r": 38, "t": 22, "b": 58}),
         showlegend=False,
-        xaxis={
-            "automargin": True,
-            "fixedrange": True,
-            "gridcolor": "#e4ebf2",
-            "linecolor": "#c8d2dc",
-            "showline": True,
-            "title": {"text": "Total Revenue", "standoff": 12},
-            "ticksuffix": "g",
-            "zeroline": False,
-        },
-        yaxis={
-            "automargin": True,
-            "fixedrange": True,
-            "gridcolor": "#e4ebf2",
-            "linecolor": "#c8d2dc",
-            "showline": True,
-            "title": {"text": "Extra Gold vs Raw", "standoff": 12},
-            "ticksuffix": "g",
-            "zeroline": False,
-        },
+        xaxis=axis_style("Total Revenue", ticksuffix="g"),
+        yaxis=axis_style("Extra Gold vs Raw", ticksuffix="g"),
     )
     return figure
 
@@ -572,7 +535,7 @@ def _build_utilization_chart(evaluated: list[dict]) -> go.Figure:
             y=labels,
             x=used,
             orientation="h",
-            marker={"color": "#1497ee", "line": {"color": "#ffffff", "width": 1}},
+            marker={"color": CHART_COLORS["green"], "line": {"color": CHART_COLORS["cream"], "width": 1}},
             text=[f"{value:,.0f}" for value in used],
             textposition="inside",
             insidetextanchor="middle",
@@ -586,7 +549,7 @@ def _build_utilization_chart(evaluated: list[dict]) -> go.Figure:
             y=labels,
             x=idle,
             orientation="h",
-            marker={"color": "rgba(184, 197, 208, 0.45)", "line": {"color": "#ffffff", "width": 1}},
+            marker={"color": CHART_COLORS["tan"], "line": {"color": CHART_COLORS["cream"], "width": 1}},
             text=[f"{value:,.0f}" if value else "" for value in idle],
             textposition="inside",
             insidetextanchor="middle",
@@ -599,30 +562,17 @@ def _build_utilization_chart(evaluated: list[dict]) -> go.Figure:
             x=[item["machine_cycles"] for item in methods],
             y=labels,
             mode="markers+text",
-            marker={"size": 13, "color": "#23a67a", "line": {"color": "#ffffff", "width": 2}},
+            marker={"size": 13, "color": CHART_COLORS["gold"], "line": {"color": CHART_COLORS["cream"], "width": 2}},
             text=[f"{value:.0f}%" for value in utilization],
             textposition="middle right",
             hovertemplate="%{y}<br>Total cycles: %{x:,.0f}<extra></extra>",
         )
     )
     figure.update_layout(
+        **base_layout(height=max(330, 116 + (len(methods) * 54)), margin={"l": 118, "r": 62, "t": 22, "b": 50}),
         barmode="stack",
-        height=max(330, 116 + (len(methods) * 54)),
-        margin={"l": 118, "r": 62, "t": 22, "b": 50},
-        font={"color": "#24384a", "family": "Inter, Segoe UI, sans-serif", "size": 12},
-        hoverlabel={"bgcolor": "#143047", "bordercolor": "#143047", "font": {"color": "#ffffff", "size": 12}},
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
         legend={"orientation": "h", "x": 0, "y": 1.08, "font": {"size": 11}},
-        xaxis={
-            "automargin": True,
-            "fixedrange": True,
-            "gridcolor": "#e4ebf2",
-            "linecolor": "#c8d2dc",
-            "showline": True,
-            "title": {"text": "Machine Cycles", "standoff": 12},
-            "zeroline": False,
-        },
+        xaxis=axis_style("Machine Cycles"),
         yaxis={"automargin": True, "fixedrange": True, "autorange": "reversed", "tickfont": {"size": 12}},
     )
     return figure
@@ -701,6 +651,21 @@ def _method_label(method: dict) -> str:
     return f"{method['method_name']} ({method['product_name']})"
 
 
+def _method_color(method: dict) -> str:
+    equipment = method.get("equipment")
+    if equipment == EQUIPMENT_NONE:
+        return CHART_COLORS["tan"]
+    if equipment == EQUIPMENT_KEG:
+        return CHART_COLORS["gold"]
+    if equipment == EQUIPMENT_PRESERVES_JAR:
+        return CHART_COLORS["green"]
+    if equipment == EQUIPMENT_MILL:
+        return CHART_COLORS["brown"]
+    if equipment == EQUIPMENT_OIL_MAKER:
+        return CHART_COLORS["red"]
+    return CHART_COLORS["muted"]
+
+
 def _metric_tile(label: str, value: str) -> html.Div:
     return html.Div(
         className="metric-tile",
@@ -730,10 +695,7 @@ def _build_table_rows(evaluated: list[dict], seed_cost: float) -> list[dict]:
 def _empty_figure(message: str) -> go.Figure:
     figure = go.Figure()
     figure.update_layout(
-        height=300,
-        margin={"l": 20, "r": 20, "t": 20, "b": 20},
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
+        **base_layout(height=300, margin={"l": 20, "r": 20, "t": 20, "b": 20}),
         xaxis={"visible": False},
         yaxis={"visible": False},
     )

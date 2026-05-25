@@ -1,15 +1,17 @@
 from __future__ import annotations
 
+import math
+
 import pandas as pd
 import plotly.graph_objects as go
 from dash import Input, Output, State, callback, dash_table, dcc, html, register_page
 
 from src.farm_math import compute_harvest_schedule
+from src.figures import CHART_COLORS, CHART_PALETTE, axis_style, base_layout
 
 register_page(__name__, path="/harvest-calendar", name="Harvest Calendar", order=3)
 
-# Define color palette used across pages
-COLOR_PALETTE = ["#1497ee", "#ff334a", "#23a67a", "#9b7cff", "#f39c12", "#536679"]
+COLOR_PALETTE = CHART_PALETTE
 
 layout = html.Div(
     className="page-card calendar-page",
@@ -244,63 +246,90 @@ def update_calendar_views(selected_crops, rows, current_day, tiles):
     # Multi-season crops can generate harvest events beyond day 28 within the active window.
     max_day = max(int(df_events["day"].max() if not df_events.empty else 28), 28)
 
-    # 1. Gantt Chart (Scatter plot approximations)
+    # 1. Timeline chart
     fig_gantt = go.Figure()
+    shown_plant_legend = False
+    shown_harvest_legend = False
     for i, crop_id in enumerate(selected_crops):
         if crop_id not in rows_dict:
             continue
         crop_name = rows_dict[crop_id]["crop_name"]
         df_c = df_events[df_events["crop_id"] == crop_id]
+        color = COLOR_PALETTE[i % len(COLOR_PALETTE)]
 
         plants = df_c[df_c["event"] == "Plant"]["day"].tolist()
         harvests = df_c[df_c["event"] == "Harvest"]["day"].tolist()
 
-        y_val_plants = [crop_name] * len(plants)
-        fig_gantt.add_trace(
-            go.Scatter(
-                x=plants,
-                y=y_val_plants,
-                mode="markers",
-                marker=dict(symbol="triangle-right", size=12, color=COLOR_PALETTE[i % len(COLOR_PALETTE)]),
-                name=f"{crop_name} Plant",
-                showlegend=False,
-            )
-        )
-
-        y_val_harvests = [crop_name] * len(harvests)
-        fig_gantt.add_trace(
-            go.Scatter(
-                x=harvests,
-                y=y_val_harvests,
-                mode="markers",
-                marker=dict(symbol="star", size=12, color=COLOR_PALETTE[i % len(COLOR_PALETTE)]),
-                name=f"{crop_name} Harvest",
-                showlegend=False,
-            )
-        )
-
-        # Add connecting lines between plant and its harvests
         if plants and harvests:
-            last_harvest = max(harvests)
             fig_gantt.add_trace(
                 go.Scatter(
-                    x=[plants[0], last_harvest],
+                    x=[min(plants), max(harvests)],
                     y=[crop_name, crop_name],
                     mode="lines",
-                    line=dict(color=COLOR_PALETTE[i % len(COLOR_PALETTE)], width=2),
+                    line={"color": color, "width": 4},
+                    opacity=0.38,
+                    hoverinfo="skip",
                     showlegend=False,
                 )
             )
 
+        fig_gantt.add_trace(
+            go.Scatter(
+                x=plants,
+                y=[crop_name] * len(plants),
+                mode="markers",
+                marker={
+                    "symbol": "triangle-right",
+                    "size": 13,
+                    "color": color,
+                    "line": {"color": CHART_COLORS["cream"], "width": 1},
+                },
+                name="Plant",
+                legendgroup="Plant",
+                showlegend=not shown_plant_legend,
+                customdata=[[crop_name] for _ in plants],
+                hovertemplate="<b>%{customdata[0]}</b><br>Plant on day %{x}<extra></extra>",
+            )
+        )
+        shown_plant_legend = True
+
+        fig_gantt.add_trace(
+            go.Scatter(
+                x=harvests,
+                y=[crop_name] * len(harvests),
+                mode="markers",
+                marker={
+                    "symbol": "star",
+                    "size": 14,
+                    "color": CHART_COLORS["gold"],
+                    "line": {"color": color, "width": 2},
+                },
+                name="Harvest",
+                legendgroup="Harvest",
+                showlegend=not shown_harvest_legend,
+                customdata=[[crop_name] for _ in harvests],
+                hovertemplate="<b>%{customdata[0]}</b><br>Harvest on day %{x}<extra></extra>",
+            )
+        )
+        shown_harvest_legend = True
+
     fig_gantt.update_layout(
-        margin=dict(l=20, r=20, t=20, b=20),
-        xaxis_title="Day of Plot",
-        yaxis_title="",
-        xaxis=dict(range=[1, max_day], dtick=max(1, max_day // 14)),
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
-        showlegend=False,
+        **base_layout(height=max(300, 120 + (len(selected_crops) * 60)), margin={"l": 118, "r": 26, "t": 34, "b": 48}),
+        xaxis={**axis_style("Day"), "range": [1, max_day], "dtick": max(1, max_day // 14)},
+        yaxis={"fixedrange": True, "title": "", "tickfont": {"color": CHART_COLORS["ink"], "size": 12}},
+        showlegend=True,
+        legend={"orientation": "h", "x": 0, "y": 1.12},
     )
+    if max_day > 28:
+        fig_gantt.add_vline(
+            x=28,
+            line_color=CHART_COLORS["brown"],
+            line_dash="dot",
+            line_width=1,
+            annotation_text="season end",
+            annotation_position="top",
+            annotation_font={"size": 10, "color": CHART_COLORS["muted"]},
+        )
 
     # 2. Cumulative Profit Chart (Line chart with step)
     fig_profit = go.Figure()
@@ -325,24 +354,23 @@ def update_calendar_views(selected_crops, rows, current_day, tiles):
                 mode="lines+markers",
                 line_shape="vh",  # step chart
                 name=crop_name,
-                line=dict(color=COLOR_PALETTE[i % len(COLOR_PALETTE)], width=2),
+                line={"color": COLOR_PALETTE[i % len(COLOR_PALETTE)], "width": 3},
+                marker={"size": 8, "line": {"color": CHART_COLORS["cream"], "width": 1}},
+                hovertemplate="<b>%{fullData.name}</b><br>Day %{x}<br>Cumulative profit: %{y:,.0f}g<extra></extra>",
             )
         )
 
     fig_profit.update_layout(
-        margin=dict(l=20, r=20, t=20, b=20),
-        xaxis_title="Day of Plot",
-        yaxis_title="Cumulative Profit (g)",
-        xaxis=dict(range=[1, max_day], dtick=max(1, max_day // 14)),
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
+        **base_layout(height=400, margin={"l": 72, "r": 30, "t": 24, "b": 52}),
+        legend={"orientation": "h", "x": 0, "y": 1.12},
+        xaxis={**axis_style("Day"), "range": [1, max_day], "dtick": max(1, max_day // 14)},
+        yaxis=axis_style("Cumulative Profit", ticksuffix="g"),
     )
+    fig_profit.add_hline(y=0, line_color=CHART_COLORS["brown"], line_dash="dot", line_width=1, opacity=0.6)
 
     # 3. Calendar Heatmap
     # Group by revenue per day
     df_rev = df_events[df_events["event"] == "Harvest"].groupby("day")["revenue"].sum().reset_index()
-
-    import math
 
     weeks = math.ceil(max_day / 7)
 
@@ -350,44 +378,50 @@ def update_calendar_views(selected_crops, rows, current_day, tiles):
     # We will compute total revenue for all selected crops per day.
     heatmap_z = []
     text_z = []
+    custom_z = []
 
     for week in range(weeks):
         week_z = []
         week_text = []
+        week_custom = []
         for d in range(1, 8):
             day_num = week * 7 + d
             val_rows = df_rev[df_rev["day"] == day_num]
             val = val_rows["revenue"].iloc[0] if not val_rows.empty else 0
             week_z.append(val)
-            if val > 0:
-                week_text.append(f"Day {day_num}<br>{val:,.0f}g")
-            else:
-                week_text.append(f"Day {day_num}")
+            week_text.append(f"{day_num}<br>{val:,.0f}g" if val > 0 else f"{day_num}")
+            week_custom.append([day_num, val])
         heatmap_z.append(week_z)
         text_z.append(week_text)
+        custom_z.append(week_custom)
 
     # Reverse to start from top
     heatmap_z = heatmap_z[::-1]
     text_z = text_z[::-1]
+    custom_z = custom_z[::-1]
 
     y_labels = [f"Week {i}" for i in range(weeks, 0, -1)]
 
     fig_heatmap = go.Figure(
         data=go.Heatmap(
             z=heatmap_z,
-            x=["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+            x=["1", "2", "3", "4", "5", "6", "7"],
             y=y_labels,
             text=text_z,
+            customdata=custom_z,
             texttemplate="%{text}",
-            colorscale="Greens",
+            colorscale=[[0, "#fff6dc"], [0.45, "#dce8bd"], [1, CHART_COLORS["green"]]],
             showscale=True,
+            hovertemplate="Day %{customdata[0]}<br>Revenue: %{customdata[1]:,.0f}g<extra></extra>",
+            xgap=3,
+            ygap=3,
         )
     )
 
     fig_heatmap.update_layout(
-        margin=dict(l=20, r=20, t=20, b=20),
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
+        **base_layout(height=max(350, 120 + weeks * 48), margin={"l": 58, "r": 24, "t": 18, "b": 42}),
+        xaxis={"title": "Day in Week", "fixedrange": True, "side": "top"},
+        yaxis={"title": "", "fixedrange": True},
     )
 
     # Format event table

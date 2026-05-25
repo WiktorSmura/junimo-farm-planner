@@ -4,6 +4,7 @@ import plotly.graph_objects as go
 from dash import Input, Output, State, callback, dash_table, dcc, html, register_page
 
 from src.farm_mix import allocate_mix, rank_mix_candidates, summarize_mix
+from src.figures import CHART_COLORS, CHART_PALETTE, base_layout
 
 register_page(__name__, path="/farm-mix", name="Farm Mix", order=5)
 
@@ -139,8 +140,8 @@ layout = html.Div(
                         html.Div(
                             className="section-head",
                             children=[
-                                html.H3("Budget Allocation"),
-                                html.P("Seed spend by crop against the available budget."),
+                                html.H3("Budget Flow"),
+                                html.P("Money flow from available budget into seed spend and expected return."),
                             ],
                         ),
                         dcc.Graph(
@@ -290,7 +291,7 @@ def _build_field_map(allocations: list[dict], totals: dict) -> go.Figure:
         parents.append("Planting Mix")
         profits.append(0.0)
         seed_costs.append(0.0)
-        colors.append("#dfe7ee")
+        colors.append(CHART_COLORS["tan"])
 
     figure = go.Figure(
         go.Treemap(
@@ -298,7 +299,7 @@ def _build_field_map(allocations: list[dict], totals: dict) -> go.Figure:
             parents=["", *parents],
             values=[sum(values), *values],
             branchvalues="total",
-            marker={"colors": ["#f6f9fc", *colors], "line": {"color": "#ffffff", "width": 2}},
+            marker={"colors": [CHART_COLORS["cream"], *colors], "line": {"color": CHART_COLORS["cream"], "width": 2}},
             customdata=[[0.0, 0.0], *[[profit, seed_cost] for profit, seed_cost in zip(profits, seed_costs, strict=True)]],
             hovertemplate=(
                 "<b>%{label}</b><br>Tiles: %{value}<br>Profit: %{customdata[0]:,.0f}g<br>"
@@ -308,10 +309,7 @@ def _build_field_map(allocations: list[dict], totals: dict) -> go.Figure:
         )
     )
     figure.update_layout(
-        margin={"l": 8, "r": 8, "t": 8, "b": 8},
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        font={"color": "#24384a", "family": "Inter, Segoe UI, sans-serif", "size": 12},
+        **base_layout(height=460, margin={"l": 8, "r": 8, "t": 8, "b": 8}),
     )
     return figure
 
@@ -320,44 +318,72 @@ def _build_budget_chart(allocations: list[dict], totals: dict) -> go.Figure:
     if not allocations:
         return _empty_figure("No allocation to display.")
 
+    labels = ["Budget", *[item["crop_name"] for item in allocations], "Remaining", "Expected Profit"]
+    budget_index = 0
+    remaining_index = len(labels) - 2
+    profit_index = len(labels) - 1
+    source = []
+    target = []
+    value = []
+    colors = []
     palette = _palette()
-    figure = go.Figure()
-    for index, item in enumerate(allocations):
-        figure.add_bar(
-            name=item["crop_name"],
-            y=["Budget"],
-            x=[float(item["seed_cost"])],
-            orientation="h",
-            marker={"color": palette[index % len(palette)], "line": {"color": "#ffffff", "width": 1}},
-            hovertemplate=f"{item['crop_name']} seed cost: %{{x:,.0f}}g<extra></extra>",
-        )
+
+    for index, item in enumerate(allocations, start=1):
+        crop_color = palette[(index - 1) % len(palette)]
+        seed_cost = float(item["seed_cost"])
+        expected_profit = max(0.0, float(item["profit"]))
+
+        source.append(budget_index)
+        target.append(index)
+        value.append(seed_cost)
+        colors.append(crop_color)
+
+        source.append(index)
+        target.append(profit_index)
+        value.append(expected_profit)
+        colors.append("rgba(79, 138, 61, 0.34)")
 
     remaining = float(totals.get("budget_remaining", 0.0) or 0.0)
     if totals.get("budget_limited", True) and remaining > 0:
-        figure.add_bar(
-            name="Remaining",
-            y=["Budget"],
-            x=[remaining],
-            orientation="h",
-            marker={"color": "#dfe7ee", "line": {"color": "#ffffff", "width": 1}},
-            hovertemplate="Remaining budget: %{x:,.0f}g<extra></extra>",
+        source.append(budget_index)
+        target.append(remaining_index)
+        value.append(remaining)
+        colors.append("rgba(117, 104, 82, 0.24)")
+
+    node_colors = [
+        CHART_COLORS["brown"],
+        *[palette[index % len(palette)] for index in range(len(allocations))],
+        CHART_COLORS["tan"],
+        CHART_COLORS["green"],
+    ]
+    figure = go.Figure(
+        go.Sankey(
+            arrangement="snap",
+            node={
+                "label": labels,
+                "pad": 18,
+                "thickness": 16,
+                "line": {"color": CHART_COLORS["cream"], "width": 1},
+                "color": node_colors,
+            },
+            link={
+                "source": source,
+                "target": target,
+                "value": value,
+                "color": colors,
+                "hovertemplate": "%{source.label} -> %{target.label}<br>%{value:,.0f}g<extra></extra>",
+            },
         )
+    )
 
     figure.update_layout(
-        barmode="stack",
-        margin={"l": 12, "r": 12, "t": 18, "b": 48},
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        legend={"orientation": "h", "y": -0.18},
-        xaxis={"title": "Gold", "fixedrange": True, "gridcolor": "#e4ebf2", "ticksuffix": "g"},
-        yaxis={"fixedrange": True, "showticklabels": False},
-        font={"color": "#24384a", "family": "Inter, Segoe UI, sans-serif", "size": 12},
+        **base_layout(height=380, margin={"l": 8, "r": 8, "t": 8, "b": 8}),
     )
     return figure
 
 
 def _palette() -> list[str]:
-    return ["#1497ee", "#23a67a", "#ff334a", "#f39c12", "#536679", "#9b7cff", "#00a6a6", "#c26a2e"]
+    return CHART_PALETTE
 
 
 def _format_table_rows(rows: list[dict]) -> list[dict]:
@@ -381,9 +407,7 @@ def _format_table_rows(rows: list[dict]) -> list[dict]:
 def _empty_figure(message: str) -> go.Figure:
     figure = go.Figure()
     figure.update_layout(
-        margin={"l": 20, "r": 20, "t": 20, "b": 20},
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
+        **base_layout(height=320, margin={"l": 20, "r": 20, "t": 20, "b": 20}),
         xaxis={"visible": False},
         yaxis={"visible": False},
     )

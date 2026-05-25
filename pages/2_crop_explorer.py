@@ -6,6 +6,8 @@ from typing import Any
 import plotly.graph_objects as go
 from dash import Input, Output, State, callback, dash_table, dcc, html, no_update, register_page
 
+from src.figures import CHART_COLORS, CHART_PALETTE, axis_style, base_layout, hover_label_style
+
 register_page(__name__, path="/crop-explorer", name="Crop Explorer", order=2)
 
 AXIS_OPTIONS = [
@@ -47,8 +49,7 @@ TABLE_COLUMNS = [
     {"name": "Affordable", "id": "affordable"},
 ]
 
-COLOR_PALETTE = ["#1497ee", "#ff334a", "#23a67a", "#9b7cff", "#f39c12", "#536679"]
-PLOTLY_COLORS = ["#636EFA", "#EF553B", "#00CC96", "#AB63FA", "#FFA15A", "#19D3F3"]
+COLOR_PALETTE = CHART_PALETTE
 
 
 def _control_field(title: str, body: object) -> html.Div:
@@ -357,8 +358,11 @@ def _build_scatter(rows: list[dict], selected_crop_id: str | None, x_axis: str, 
                 marker={
                     "color": color,
                     "line": {
-                        "color": ["#143047" if row["crop_id"] == selected_crop_id else "#ffffff" for row in group_rows],
-                        "width": [2.5 if row["crop_id"] == selected_crop_id else 1 for row in group_rows],
+                        "color": [
+                            CHART_COLORS["gold"] if row["crop_id"] == selected_crop_id else CHART_COLORS["cream"]
+                            for row in group_rows
+                        ],
+                        "width": [3 if row["crop_id"] == selected_crop_id else 1 for row in group_rows],
                     },
                     "opacity": [1 if row["crop_id"] == selected_crop_id else 0.74 for row in group_rows],
                     "size": [_marker_size(row) for row in group_rows],
@@ -367,15 +371,33 @@ def _build_scatter(rows: list[dict], selected_crop_id: str | None, x_axis: str, 
             )
         )
 
+    avg_x = _mean(rows, x_axis)
+    avg_y = _mean(rows, y_axis)
+    figure.add_vline(
+        x=avg_x,
+        line_color=CHART_COLORS["brown"],
+        line_dash="dot",
+        line_width=1,
+        opacity=0.55,
+        annotation_text="avg x",
+        annotation_position="top",
+        annotation_font={"size": 10, "color": CHART_COLORS["muted"]},
+    )
+    figure.add_hline(
+        y=avg_y,
+        line_color=CHART_COLORS["brown"],
+        line_dash="dot",
+        line_width=1,
+        opacity=0.55,
+        annotation_text="avg y",
+        annotation_position="right",
+        annotation_font={"size": 10, "color": CHART_COLORS["muted"]},
+    )
+
     figure.update_layout(
-        height=520,
-        margin={"l": 62, "r": 24, "t": 16, "b": 58},
-        font={"color": "#24384a", "family": "Inter, Segoe UI, sans-serif", "size": 12},
-        hoverlabel=_hover_label_style(),
+        **base_layout(height=520, margin={"l": 62, "r": 28, "t": 36, "b": 58}),
         legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "x": 0},
         uirevision=f"{x_axis}:{y_axis}:{color_by}",
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
         xaxis=_axis_style(AXIS_LABELS.get(x_axis, x_axis)),
         yaxis=_axis_style(AXIS_LABELS.get(y_axis, y_axis)),
     )
@@ -431,27 +453,23 @@ def _build_histogram(rows: list[dict], selected_crop: dict | None, metric: str) 
         go.Histogram(
             x=values,
             nbinsx=min(12, max(4, len(rows))),
-            marker={"color": "#1497ee", "line": {"color": "#ffffff", "width": 1}, "opacity": 0.78},
+            marker={"color": CHART_COLORS["green"], "line": {"color": CHART_COLORS["cream"], "width": 1}, "opacity": 0.82},
             hovertemplate=f"{metric_label}: %{{x:,.2f}}<br>Crops: %{{y}}<extra></extra>",
         )
     )
     if selected_value is not None:
         figure.add_vline(
             x=selected_value,
-            line_color="#ff334a",
+            line_color=CHART_COLORS["gold"],
             line_dash="dot",
-            line_width=2,
+            line_width=3,
             annotation_text="selected",
             annotation_position="top",
+            annotation_font={"color": CHART_COLORS["ink"], "size": 11},
         )
     figure.update_layout(
-        height=320,
+        **base_layout(height=320, margin={"l": 58, "r": 22, "t": 20, "b": 54}),
         bargap=0.08,
-        margin={"l": 58, "r": 22, "t": 16, "b": 54},
-        font={"color": "#24384a", "family": "Inter, Segoe UI, sans-serif", "size": 12},
-        hoverlabel=_hover_label_style(),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
         showlegend=False,
         xaxis=_axis_style(metric_label),
         yaxis=_axis_style("Crop Count"),
@@ -642,33 +660,17 @@ def _mean(rows: list[dict], key: str) -> float:
 
 
 def _axis_style(title: str) -> dict[str, Any]:
-    return {
-        "automargin": True,
-        "fixedrange": True,
-        "gridcolor": "#e4ebf2",
-        "linecolor": "#c8d2dc",
-        "showline": True,
-        "tickfont": {"color": "#536679", "size": 11},
-        "title": {"text": title, "standoff": 12},
-        "zeroline": False,
-    }
+    return axis_style(title)
 
 
 def _hover_label_style() -> dict[str, Any]:
-    return {
-        "bgcolor": "#143047",
-        "bordercolor": "#143047",
-        "font": {"color": "#ffffff", "family": "Inter, Segoe UI, sans-serif", "size": 12},
-    }
+    return hover_label_style()
 
 
 def _empty_figure(message: str, height: int) -> go.Figure:
     figure = go.Figure()
     figure.update_layout(
-        height=height,
-        margin={"l": 20, "r": 20, "t": 20, "b": 20},
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
+        **base_layout(height=height, margin={"l": 20, "r": 20, "t": 20, "b": 20}),
         xaxis={"visible": False},
         yaxis={"visible": False},
     )
