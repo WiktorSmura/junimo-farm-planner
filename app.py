@@ -4,6 +4,7 @@ from dash import Dash, Input, Output, callback, dcc, html, page_container
 from src.dashboard_state import (
     DEFAULT_FILTERS,
     FERTILIZER_OPTIONS,
+    GOAL_OPTIONS,
     SEASON_OPTIONS,
     build_filtered_snapshot,
 )
@@ -152,6 +153,44 @@ app.layout = html.Div(
                                             "Gold for seeds",
                                         ),
                                         _control_field(
+                                            "Goal",
+                                            dcc.RadioItems(
+                                                id="goal-control",
+                                                options=GOAL_OPTIONS,
+                                                value=DEFAULT_FILTERS["goal"],
+                                                className="goal-radio",
+                                                inputClassName="goal-radio-input",
+                                                labelClassName="goal-radio-label",
+                                            ),
+                                            "How crops are ranked",
+                                        ),
+                                        _control_field(
+                                            "Processing mode",
+                                            dcc.Dropdown(
+                                                id="processing-control",
+                                                options=[
+                                                    {"label": "All methods", "value": "all"},
+                                                    {"label": "Raw only", "value": "raw_only"},
+                                                    {"label": "Artisan preview", "value": "artisan"},
+                                                ],
+                                                value=DEFAULT_FILTERS["processing_mode"],
+                                                clearable=False,
+                                            ),
+                                            "Default lab assumption",
+                                        ),
+                                        _control_field(
+                                            "Search crop",
+                                            dcc.Input(
+                                                id="crop-search-control",
+                                                type="text",
+                                                debounce=True,
+                                                placeholder="e.g. Blueberry",
+                                                value=DEFAULT_FILTERS["crop_search"],
+                                                className="control-input",
+                                            ),
+                                            "Narrows all pages",
+                                        ),
+                                        _control_field(
                                             "Fertilizer",
                                             dcc.Dropdown(
                                                 id="fertilizer-control",
@@ -197,6 +236,9 @@ app.layout = html.Div(
     Input("day-control", "value"),
     Input("tiles-control", "value"),
     Input("budget-control", "value"),
+    Input("goal-control", "value"),
+    Input("processing-control", "value"),
+    Input("crop-search-control", "value"),
     Input("fertilizer-control", "value"),
 )
 def sync_shared_state(
@@ -204,6 +246,9 @@ def sync_shared_state(
     day: int,
     tiles: int,
     budget: float | None,
+    goal: str,
+    processing_mode: str,
+    crop_search: str,
     fertilizer: str,
 ):
     snapshot = build_filtered_snapshot(
@@ -211,8 +256,9 @@ def sync_shared_state(
         current_day=day,
         tiles=tiles,
         budget=budget,
-        goal=None,
+        goal=goal,
         fertilizer=fertilizer,
+        crop_search=crop_search,
     )
 
     summary_nodes = [html.P(snapshot["summary"], className="control-summary-text")]

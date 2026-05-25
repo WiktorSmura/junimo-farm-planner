@@ -1,23 +1,25 @@
 :root {
-  --bg: #ffffff;
-  --surface: #ffffff;
-  --surface-muted: #f6f9fc;
-  --surface-tint: #eef6ff;
-  --ink: #143047;
-  --text: #24384a;
-  --text-muted: #536679;
-  --border: #c8d2dc;
-  --border-strong: #aebcca;
-  --accent: #1497ee;
-  --accent-strong: #008af3;
-  --accent-soft: #e8f3ff;
-  --green: #23a67a;
-  --gold: #ff334a;
-  --danger: #ff334a;
-  --warning: #b85b00;
-  --warning-soft: #fff3dc;
-  --radius: 8px;
-  --shadow: 0 14px 34px rgba(20, 48, 71, 0.07);
+  --bg: #f3e6c4;
+  --surface: #fff6dc;
+  --surface-muted: #ead9aa;
+  --surface-tint: #dce8bd;
+  --ink: #2d2418;
+  --text: #403523;
+  --text-muted: #756852;
+  --border: #c6aa6a;
+  --border-strong: #8b6a32;
+  --accent: #4f8a3d;
+  --accent-strong: #346b32;
+  --accent-soft: #dce8bd;
+  --green: #4f8a3d;
+  --gold: #c4872f;
+  --danger: #b84c3f;
+  --warning: #9f641d;
+  --warning-soft: #fff0cf;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 3px 3px 0 rgba(91, 65, 28, 0.16);
+  --shadow-soft: 2px 2px 0 rgba(91, 65, 28, 0.12);
 }
 
 *,
@@ -46,6 +48,11 @@ a:hover {
   text-decoration: underline;
 }
 
+::selection {
+  background: rgba(214, 154, 45, 0.34);
+  color: var(--ink);
+}
+
 #react-entry-point,
 .dash-debug-menu,
 .dash-app {
@@ -60,17 +67,21 @@ a:hover {
   padding: 20px clamp(18px, 2.4vw, 40px) 28px;
 }
 
+.page-container {
+  padding-bottom: 24px;
+}
+
 .app-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 18px;
   min-width: 0;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  padding: 0;
-  box-shadow: none;
+  background: var(--surface);
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-soft);
 }
 
 .brand-lockup {
@@ -79,13 +90,15 @@ a:hover {
   gap: 12px;
   min-width: 0;
   padding-right: 24px;
-  border-right: 1px solid var(--border);
+  border-right: 2px solid var(--border);
 }
 
 .app-logo {
-  width: 42px;
-  height: 42px;
+  width: 48px;
+  height: 48px;
   flex: 0 0 auto;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
 }
 
 .eyebrow {
@@ -120,7 +133,7 @@ a:hover {
   padding: 4px;
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: var(--surface);
+  background: #f8edca;
 }
 
 .nav-link {
@@ -130,7 +143,7 @@ a:hover {
   min-height: 34px;
   padding: 0 14px;
   border-radius: 999px;
-  color: var(--text);
+  color: var(--text-muted);
   font-size: 0.84rem;
   font-weight: 650;
   white-space: nowrap;
@@ -148,7 +161,7 @@ a:hover {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: none;
+  box-shadow: var(--shadow-soft);
 }
 
 .mobile-nav summary {
@@ -168,13 +181,18 @@ a:hover {
   padding: 0 10px 10px;
 }
 
+.mobile-nav .nav-link {
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
 .dashboard-layout {
   display: grid;
   grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
   gap: clamp(22px, 2.6vw, 48px);
   align-items: start;
   min-width: 0;
-  margin-top: 34px;
+  margin-top: 28px;
 }
 
 .control-panel,
@@ -190,12 +208,11 @@ a:hover {
   position: sticky;
   top: 12px;
   overflow: visible;
-  background: transparent;
-  border: 0;
-  border-right: 1px solid var(--border);
-  border-radius: 0;
-  box-shadow: none;
-  padding-right: clamp(18px, 2vw, 34px);
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+  padding: 16px;
 }
 
 .control-panel-header {
@@ -219,6 +236,10 @@ a:hover {
   color: var(--ink);
   font-size: 1rem;
   line-height: 1.2;
+}
+
+.control-panel-header:hover h2 {
+  color: var(--accent-strong);
 }
 
 .control-panel-header p {
@@ -249,6 +270,10 @@ a:hover {
   font-weight: 750;
 }
 
+.control-field:focus-within .control-label {
+  color: var(--accent-strong);
+}
+
 .control-hint {
   margin: 0;
   color: var(--text-muted);
@@ -260,11 +285,35 @@ a:hover {
   width: 100%;
   min-height: 36px;
   border: 1px solid var(--border-strong);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 0 10px;
   background: var(--surface);
   color: var(--text);
   font: inherit;
+}
+
+.control-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+  outline: none;
+}
+
+.goal-radio {
+  display: grid;
+  gap: 6px;
+}
+
+.goal-radio-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.goal-radio-input {
+  accent-color: var(--accent);
 }
 
 .Select,
@@ -275,7 +324,20 @@ a:hover {
 
 .Select-control {
   border-color: var(--border-strong);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.Select.is-focused > .Select-control,
+.Select-control:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.Select-menu-outer {
+  border-color: var(--border-strong);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  box-shadow: var(--shadow-soft);
 }
 
 .rc-slider {
@@ -350,8 +412,8 @@ a:hover {
 }
 
 .page-head {
-  padding: 0 0 22px;
-  border-bottom: 1px solid var(--border);
+  padding: 4px 0 22px;
+  border-bottom: 2px solid var(--border);
 }
 
 .page-card h2 {
@@ -360,6 +422,12 @@ a:hover {
   font-size: 1.48rem;
   font-weight: 780;
   line-height: 1.15;
+}
+
+.page-head > p:last-child {
+  max-width: 72ch;
+  font-size: 0.95rem;
+  line-height: 1.55;
 }
 
 .page-card p,
@@ -371,7 +439,7 @@ a:hover {
   display: inline-flex;
   align-items: center;
   min-height: 22px;
-  padding: 0 8px;
+  padding: 0 9px;
   border-radius: 999px;
   background: var(--accent-soft);
   color: var(--accent-strong);
@@ -383,16 +451,17 @@ a:hover {
 
 .plan-section {
   margin-top: 20px;
-  padding: 0;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
+  padding: 18px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
 }
 
 .leaderboard-section {
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border);
+  padding-bottom: 18px;
+  border-bottom: 2px solid var(--border);
+  overflow: hidden;
 }
 
 .section-head {
@@ -411,6 +480,17 @@ a:hover {
   line-height: 1.2;
 }
 
+.section-head h3::before {
+  content: "";
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-right: 0.45rem;
+  border-radius: 999px;
+  background: var(--gold);
+  vertical-align: 0.08rem;
+}
+
 .section-head p {
   margin: 3px 0 0;
   max-width: 58ch;
@@ -423,6 +503,16 @@ a:hover {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
+}
+
+.about-page .detail-card {
+  max-width: 920px;
+}
+
+.about-page ol,
+.about-page ul {
+  margin: 8px 0 0;
+  padding-left: 1.15rem;
 }
 
 .plan-details-grid {
@@ -445,7 +535,7 @@ a:hover {
 
 .explorer-controls-section {
   padding-bottom: 18px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 2px solid var(--border);
 }
 
 .explorer-control-grid {
@@ -461,6 +551,16 @@ a:hover {
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+}
+
+.histogram-metric-control {
+  width: min(260px, 100%);
+  min-width: 220px;
+}
+
+.explorer-histogram-section {
+  padding-bottom: 18px;
+  border-bottom: 2px solid var(--border);
 }
 
 .explorer-toggle-row button {
@@ -494,6 +594,7 @@ a:hover {
   color: var(--ink);
   font-size: 0.82rem;
   font-weight: 750;
+  cursor: pointer;
 }
 
 .inline-checklist-input {
@@ -598,7 +699,7 @@ a:hover {
   position: relative;
   height: 20px;
   border-radius: 999px;
-  background: #e9f0f6;
+  background: #eadfca;
   overflow: hidden;
 }
 
@@ -645,8 +746,8 @@ a:hover {
 .processing-recommendation-section {
   padding-top: 18px;
   border-top: 0;
-  background: var(--surface-muted);
-  border: 1px solid var(--border);
+  background: var(--surface-tint);
+  border: 2px solid var(--accent);
   border-radius: var(--radius);
   padding: 16px;
 }
@@ -801,6 +902,7 @@ a:hover {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 14px;
+  box-shadow: var(--shadow-soft);
 }
 
 .leaderboard-graph,
@@ -812,14 +914,80 @@ a:hover {
   margin-top: 4px;
   cursor: pointer;
   display: block;
-  min-height: 360px;
   overflow: hidden;
   position: relative;
+}
+
+.leaderboard-section .dash-graph,
+.explorer-scatter-section .dash-graph,
+.explorer-histogram-section .dash-graph,
+.processing-chart-grid .dash-graph,
+.calendar-page .dash-graph,
+.mix-page .dash-graph {
+  background: #fff9e8;
+  border: 1px solid var(--border);
 }
 
 .budget-graph {
   min-height: 180px;
   padding-top: 2px;
+}
+
+.harvest-preview-card {
+  margin-top: 12px;
+}
+
+.harvest-preview-card h3 {
+  margin-bottom: 10px;
+}
+
+.harvest-preview-body {
+  display: grid;
+  gap: 10px;
+}
+
+.harvest-preview-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.harvest-stat {
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #f8edca;
+}
+
+.harvest-preview-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.harvest-day-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.harvest-day-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--accent-strong);
+  border-radius: 999px;
+  background: var(--surface-tint);
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.harvest-day-more {
+  border-color: var(--border-strong);
+  background: var(--surface-muted);
 }
 
 .detail-card h3 {
@@ -834,7 +1002,13 @@ a:hover {
   background: var(--surface);
   border: 1px solid var(--border);
   border-left: 5px solid var(--accent);
-  box-shadow: none;
+  box-shadow: var(--shadow-soft);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.recommendation-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow);
 }
 
 .recommendation-card:nth-child(2) {
@@ -875,7 +1049,7 @@ a:hover {
   padding: 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-muted);
+  background: #f8edca;
 }
 
 .metric-label,
@@ -918,6 +1092,10 @@ a:hover {
   font-weight: 700;
 }
 
+.recommendation-badges {
+  margin-top: 10px;
+}
+
 .dash-graph,
 .dash-graph > div,
 .js-plotly-plot,
@@ -927,11 +1105,17 @@ a:hover {
   min-width: 0;
 }
 
+.dash-graph {
+  border-radius: var(--radius);
+}
+
 .dash-table-container {
   width: 100%;
   max-width: 100%;
   overflow-x: auto;
-  border-top: 1px solid var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
 }
 
 .dash-table-container .dash-spreadsheet-container {
@@ -941,6 +1125,21 @@ a:hover {
 .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th {
   color: var(--ink);
   font-weight: 750;
+  background: var(--surface-muted) !important;
+  border-color: var(--border) !important;
+}
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td {
+  border-color: var(--border) !important;
+}
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner tr:hover td {
+  background: var(--accent-soft) !important;
+}
+
+.dash-table-container input[type="radio"],
+.dash-table-container input[type="checkbox"] {
+  accent-color: var(--accent);
 }
 
 @media (max-width: 1180px) {
@@ -976,6 +1175,10 @@ a:hover {
   .metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .harvest-preview-summary {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 980px) {
@@ -985,10 +1188,8 @@ a:hover {
 
   .control-panel {
     position: static;
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
-    padding-right: 0;
-    padding-bottom: 18px;
+    border: 2px solid var(--border);
+    padding: 14px;
   }
 
   .control-grid {
@@ -1043,7 +1244,8 @@ a:hover {
   }
 
   .app-header {
-    padding: 10px;
+    padding: 12px;
+    border-radius: var(--radius);
   }
 
   .app-logo {
@@ -1068,5 +1270,19 @@ a:hover {
 
   .section-head {
     display: block;
+  }
+
+  .plan-section {
+    padding: 14px;
+  }
+
+  .histogram-metric-control {
+    width: 100%;
+    min-width: 0;
+    margin-top: 10px;
+  }
+
+  .dash-table-container {
+    border-radius: var(--radius-sm);
   }
 }

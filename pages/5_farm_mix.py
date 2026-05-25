@@ -124,7 +124,7 @@ layout = html.Div(
                     children=[
                         html.Div(
                             className="section-head",
-                            children=[html.H3("Field Layout"), html.P("A tile-level planting map for the generated mix.")],
+                            children=[html.H3("Planting Treemap"), html.P("Each rectangle represents crop tile allocation.")],
                         ),
                         dcc.Graph(
                             id="mix-treemap",
@@ -138,7 +138,10 @@ layout = html.Div(
                     children=[
                         html.Div(
                             className="section-head",
-                            children=[html.H3("Budget Flow"), html.P("How seed spend moves through the crop mix.")],
+                            children=[
+                                html.H3("Budget Allocation"),
+                                html.P("Seed spend by crop against the available budget."),
+                            ],
                         ),
                         dcc.Graph(
                             id="mix-budget-chart",
@@ -273,78 +276,42 @@ def _build_field_map(allocations: list[dict], totals: dict) -> go.Figure:
     if not allocations:
         return _empty_figure("No feasible crop mix under current constraints.")
 
-    tile_labels: list[str] = []
-    tile_crop_names: list[str] = []
-    tile_profits: list[float] = []
-    tile_colors: list[int] = []
-
-    color_index = 1
-    for item in allocations:
-        per_tile_profit = float(item["profit"]) / max(1, int(item["tiles"]))
-        for _ in range(int(item["tiles"])):
-            tile_labels.append(item["crop_name"])
-            tile_crop_names.append(item["crop_name"])
-            tile_profits.append(per_tile_profit)
-            tile_colors.append(color_index)
-        color_index += 1
+    labels = [item["crop_name"] for item in allocations]
+    values = [int(item["tiles"]) for item in allocations]
+    parents = ["Planting Mix" for _ in allocations]
+    profits = [float(item["profit"]) for item in allocations]
+    seed_costs = [float(item["seed_cost"]) for item in allocations]
+    colors = _palette()[: len(allocations)]
 
     unused_tiles = int(totals.get("unused_tiles", 0))
-    for _ in range(unused_tiles):
-        tile_labels.append("Unused")
-        tile_crop_names.append("Unused")
-        tile_profits.append(0.0)
-        tile_colors.append(0)
+    if unused_tiles > 0:
+        labels.append("Unused")
+        values.append(unused_tiles)
+        parents.append("Planting Mix")
+        profits.append(0.0)
+        seed_costs.append(0.0)
+        colors.append("#dfe7ee")
 
-    total_tiles = len(tile_labels)
-    side = max(1, int(total_tiles**0.5))
-    columns = side if side * side >= total_tiles else side + 1
-    rows = max(1, (total_tiles + columns - 1) // columns)
-
-    z: list[list[int | None]] = []
-    text: list[list[str]] = []
-    custom: list[list[list[object]]] = []
-    index = 0
-    for row_index in range(rows):
-        z_row: list[int | None] = []
-        text_row: list[str] = []
-        custom_row: list[list[object]] = []
-        for col_index in range(columns):
-            if index < total_tiles:
-                z_row.append(tile_colors[index])
-                text_row.append(tile_labels[index])
-                custom_row.append([tile_crop_names[index], tile_profits[index]])
-            else:
-                z_row.append(None)
-                text_row.append("")
-                custom_row.append(["", 0.0])
-            index += 1
-        if row_index % 2 == 1:
-            z_row.reverse()
-            text_row.reverse()
-            custom_row.reverse()
-        z.append(z_row)
-        text.append(text_row)
-        custom.append(custom_row)
-
-    colorscale = _field_colorscale(max(tile_colors) if tile_colors else 1)
     figure = go.Figure(
-        go.Heatmap(
-            z=z,
-            text=text,
-            customdata=custom,
-            colorscale=colorscale,
-            showscale=False,
-            xgap=3,
-            ygap=3,
-            hovertemplate="<b>%{customdata[0]}</b><br>Tile profit: %{customdata[1]:,.1f}g<extra></extra>",
+        go.Treemap(
+            labels=["Planting Mix", *labels],
+            parents=["", *parents],
+            values=[sum(values), *values],
+            branchvalues="total",
+            marker={"colors": ["#f6f9fc", *colors], "line": {"color": "#ffffff", "width": 2}},
+            customdata=[[0.0, 0.0], *[[profit, seed_cost] for profit, seed_cost in zip(profits, seed_costs, strict=True)]],
+            hovertemplate=(
+                "<b>%{label}</b><br>Tiles: %{value}<br>Profit: %{customdata[0]:,.0f}g<br>"
+                "Seed cost: %{customdata[1]:,.0f}g<extra></extra>"
+            ),
+            texttemplate="%{label}<br>%{value} tiles",
         )
     )
     figure.update_layout(
         margin={"l": 8, "r": 8, "t": 8, "b": 8},
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        xaxis={"visible": False, "fixedrange": True},
-        yaxis={"visible": False, "fixedrange": True, "scaleanchor": "x", "autorange": "reversed"},
+        font={"color": "#24384a", "family": "Inter, Segoe UI, sans-serif", "size": 12},
     )
     return figure
 
@@ -353,63 +320,40 @@ def _build_budget_chart(allocations: list[dict], totals: dict) -> go.Figure:
     if not allocations:
         return _empty_figure("No allocation to display.")
 
-    crop_labels = [item["crop_name"] for item in allocations]
-    labels = ["Budget", *crop_labels, "Remaining", "Expected Profit"]
-    budget_index = 0
-    remaining_index = len(labels) - 2
-    profit_index = len(labels) - 1
-
-    source = []
-    target = []
-    value = []
-    colors = []
     palette = _palette()
-    crop_colors = [palette[index % len(palette)] for index in range(len(crop_labels))]
-    for index, item in enumerate(allocations, start=1):
-        source.append(budget_index)
-        target.append(index)
-        value.append(float(item["seed_cost"]))
-        colors.append(crop_colors[index - 1])
-
-        source.append(index)
-        target.append(profit_index)
-        value.append(max(0.0, float(item["profit"])))
-        colors.append("rgba(35, 166, 122, 0.38)")
-
-    if totals.get("budget_limited", True) and float(totals.get("budget_remaining", 0.0)) > 0:
-        source.append(budget_index)
-        target.append(remaining_index)
-        value.append(float(totals.get("budget_remaining", 0.0)))
-        colors.append("rgba(184, 197, 208, 0.52)")
-
-    figure = go.Figure(
-        go.Sankey(
-            arrangement="snap",
-            node={
-                "label": labels,
-                "pad": 18,
-                "thickness": 16,
-                "line": {"color": "#ffffff", "width": 1},
-                "color": ["#143047", *crop_colors, "#dfe7ee", "#23a67a"],
-            },
-            link={
-                "source": source,
-                "target": target,
-                "value": value,
-                "color": colors,
-                "hovertemplate": "%{source.label} -> %{target.label}<br>%{value:,.0f}g<extra></extra>",
-            },
+    figure = go.Figure()
+    for index, item in enumerate(allocations):
+        figure.add_bar(
+            name=item["crop_name"],
+            y=["Budget"],
+            x=[float(item["seed_cost"])],
+            orientation="h",
+            marker={"color": palette[index % len(palette)], "line": {"color": "#ffffff", "width": 1}},
+            hovertemplate=f"{item['crop_name']} seed cost: %{{x:,.0f}}g<extra></extra>",
         )
+
+    remaining = float(totals.get("budget_remaining", 0.0) or 0.0)
+    if totals.get("budget_limited", True) and remaining > 0:
+        figure.add_bar(
+            name="Remaining",
+            y=["Budget"],
+            x=[remaining],
+            orientation="h",
+            marker={"color": "#dfe7ee", "line": {"color": "#ffffff", "width": 1}},
+            hovertemplate="Remaining budget: %{x:,.0f}g<extra></extra>",
+        )
+
+    figure.update_layout(
+        barmode="stack",
+        margin={"l": 12, "r": 12, "t": 18, "b": 48},
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        legend={"orientation": "h", "y": -0.18},
+        xaxis={"title": "Gold", "fixedrange": True, "gridcolor": "#e4ebf2", "ticksuffix": "g"},
+        yaxis={"fixedrange": True, "showticklabels": False},
+        font={"color": "#24384a", "family": "Inter, Segoe UI, sans-serif", "size": 12},
     )
-    figure.update_layout(margin={"l": 8, "r": 8, "t": 8, "b": 8}, paper_bgcolor="rgba(0,0,0,0)")
     return figure
-
-
-def _field_colorscale(max_value: int) -> list[list[object]]:
-    max_value = max(1, max_value)
-    palette = _palette()
-    colors = ["#e4ebf2", *[palette[(index - 1) % len(palette)] for index in range(1, max_value + 1)]]
-    return [[index / max_value, color] for index, color in enumerate(colors)]
 
 
 def _palette() -> list[str]:

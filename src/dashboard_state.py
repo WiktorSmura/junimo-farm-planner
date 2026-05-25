@@ -27,6 +27,9 @@ DEFAULT_FILTERS = {
     "current_day": 1,
     "tiles": 80,
     "budget": 5000.0,
+    "goal": "profit_per_day",
+    "processing_mode": "all",
+    "crop_search": "",
     "fertilizer": "none",
 }
 
@@ -42,6 +45,7 @@ def build_filtered_snapshot(
     budget: float | int | str | None,
     goal: str | None,
     fertilizer: str | None,
+    crop_search: str | None = None,
 ) -> dict[str, Any]:
     normalized = _normalize_filters(
         season=season,
@@ -50,17 +54,21 @@ def build_filtered_snapshot(
         budget=budget,
         goal=goal,
         fertilizer=fertilizer,
+        crop_search=crop_search,
     )
 
     rows: list[dict[str, Any]] = []
     budget_value = normalized["budget"]
     season_name = normalized["season"]
+    search_text = normalized["crop_search"].lower()
 
     for _, crop in _CROPS_DF.iterrows():
         seasons_list = crop["seasons_list"] if isinstance(crop["seasons_list"], list) else []
         if season_name not in seasons_list:
             continue
         if not bool(crop.get("profit_supported", True)):
+            continue
+        if search_text and search_text not in str(crop["crop_name"]).lower():
             continue
 
         window_days = _remaining_window_days(
@@ -156,9 +164,9 @@ def _normalize_filters(
     budget: float | int | str | None,
     goal: str | None,
     fertilizer: str | None,
+    crop_search: str | None,
 ) -> dict[str, Any]:
     normalized = dict(DEFAULT_FILTERS)
-    normalized["goal"] = "profit_per_day"
 
     if season in SEASON_ORDER:
         normalized["season"] = season
@@ -177,6 +185,8 @@ def _normalize_filters(
 
     if fertilizer in _FERTILIZER_GROWTH_FACTOR:
         normalized["fertilizer"] = fertilizer
+
+    normalized["crop_search"] = str(crop_search or "").strip()
 
     return normalized
 

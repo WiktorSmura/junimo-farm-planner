@@ -28,6 +28,13 @@ COLOR_OPTIONS = [
     {"label": "Maturity", "value": "can_mature"},
 ]
 
+HISTOGRAM_OPTIONS = [
+    {"label": "Profit per Day", "value": "profit_per_day"},
+    {"label": "ROI", "value": "roi"},
+    {"label": "Growth Days", "value": "growth_days"},
+    {"label": "Seed Price", "value": "seed_price"},
+]
+
 TABLE_COLUMNS = [
     {"name": "Crop", "id": "crop_name"},
     {"name": "Season", "id": "season"},
@@ -160,6 +167,34 @@ layout = html.Div(
             ],
         ),
         html.Section(
+            className="plan-section explorer-histogram-section",
+            children=[
+                html.Div(
+                    className="section-head",
+                    children=[
+                        html.Div(
+                            children=[
+                                html.H3("Metric Distribution"),
+                                html.P("See whether the selected crop is typical or an outlier among visible crops."),
+                            ],
+                        ),
+                        dcc.Dropdown(
+                            id="explorer-histogram-metric",
+                            options=HISTOGRAM_OPTIONS,
+                            value="profit_per_day",
+                            clearable=False,
+                            className="histogram-metric-control",
+                        ),
+                    ],
+                ),
+                dcc.Graph(
+                    id="explorer-histogram",
+                    config={"displayModeBar": False, "responsive": True},
+                    style={"height": "320px"},
+                ),
+            ],
+        ),
+        html.Section(
             className="plan-section",
             children=[
                 html.Div(
@@ -202,6 +237,7 @@ layout = html.Div(
     Output("explorer-scatter", "figure"),
     Output("explorer-benchmark", "children"),
     Output("explorer-comparison-panel", "children"),
+    Output("explorer-histogram", "figure"),
     Output("explorer-crop-table", "data"),
     Output("explorer-crop-table", "selected_rows"),
     Output("explorer-filter-status", "children"),
@@ -211,6 +247,7 @@ layout = html.Div(
     Input("explorer-y-axis", "value"),
     Input("explorer-color-by", "value"),
     Input("explorer-affordable-only", "value"),
+    Input("explorer-histogram-metric", "value"),
 )
 def update_explorer(
     rows: list[dict] | None,
@@ -219,6 +256,7 @@ def update_explorer(
     y_axis: str,
     color_by: str,
     affordable_only: list[str] | None,
+    histogram_metric: str,
 ):
     scoped_rows = _apply_local_filters(
         rows=rows or [],
@@ -233,11 +271,12 @@ def update_explorer(
     scatter = _build_scatter(scoped_rows, selected_crop_id, x_axis, y_axis, color_by)
     benchmark = _build_benchmark(scoped_rows, selected_crop)
     comparison = _build_comparison_panel(scoped_rows, selected_crop)
+    histogram = _build_histogram(scoped_rows, selected_crop, histogram_metric)
     table_rows = [_to_table_row(row) for row in scoped_rows]
     selected_rows = _selected_table_rows(table_rows, selected_crop_id)
     status = _benchmark_status(scoped_rows, selected_crop)
 
-    return scatter, benchmark, comparison, table_rows, selected_rows, status
+    return scatter, benchmark, comparison, histogram, table_rows, selected_rows, status
 
 
 @callback(
@@ -377,6 +416,47 @@ def _build_benchmark(rows: list[dict], selected_crop: dict | None) -> html.Div:
         )
 
     return html.Div(className="benchmark-panel", children=rows_ui)
+
+
+def _build_histogram(rows: list[dict], selected_crop: dict | None, metric: str) -> go.Figure:
+    if not rows:
+        return _empty_figure("No crops match the current explorer filters", height=320)
+
+    metric = metric if metric in AXIS_LABELS else "profit_per_day"
+    values = [float(row.get(metric, 0.0)) for row in rows]
+    selected_value = float(selected_crop.get(metric, 0.0)) if selected_crop else None
+    metric_label = AXIS_LABELS.get(metric, metric.replace("_", " ").title())
+
+    figure = go.Figure(
+        go.Histogram(
+            x=values,
+            nbinsx=min(12, max(4, len(rows))),
+            marker={"color": "#1497ee", "line": {"color": "#ffffff", "width": 1}, "opacity": 0.78},
+            hovertemplate=f"{metric_label}: %{{x:,.2f}}<br>Crops: %{{y}}<extra></extra>",
+        )
+    )
+    if selected_value is not None:
+        figure.add_vline(
+            x=selected_value,
+            line_color="#ff334a",
+            line_dash="dot",
+            line_width=2,
+            annotation_text="selected",
+            annotation_position="top",
+        )
+    figure.update_layout(
+        height=320,
+        bargap=0.08,
+        margin={"l": 58, "r": 22, "t": 16, "b": 54},
+        font={"color": "#24384a", "family": "Inter, Segoe UI, sans-serif", "size": 12},
+        hoverlabel=_hover_label_style(),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        showlegend=False,
+        xaxis=_axis_style(metric_label),
+        yaxis=_axis_style("Crop Count"),
+    )
+    return figure
 
 
 def _build_comparison_panel(rows: list[dict], selected_crop: dict | None) -> list[object]:

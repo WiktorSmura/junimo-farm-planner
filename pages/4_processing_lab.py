@@ -319,6 +319,7 @@ def sync_processing_crop_to_store(crop_id: str | None, rows: list[dict] | None):
     Input("processing-mill-available", "value"),
     Input("processing-artisan", "value"),
     Input("processing-horizon", "value"),
+    Input("processing-control", "value"),
     State("tiles-control", "value"),
 )
 def update_processing_lab(
@@ -330,6 +331,7 @@ def update_processing_lab(
     mill_available: list[str] | None,
     artisan_value: list[str] | None,
     horizon_days: int | None,
+    processing_mode: str | None,
     tiles: int | None,
 ):
     row = _find_row(rows or [], crop_id)
@@ -337,10 +339,12 @@ def update_processing_lab(
         empty = _empty_figure("Select a crop to compare processing methods.")
         return [html.H3("No crop selected"), html.P("Choose a crop to begin.")], empty, empty, empty, []
 
-    artisan = "yes" in (artisan_value or [])
+    artisan = "yes" in (artisan_value or []) or processing_mode == "artisan"
     raw_units = _raw_units(row, tiles)
     raw_price = float(row["sell_price_raw"])
     methods = build_processing_methods(row["crop_name"], raw_price, artisan=artisan)
+    if processing_mode == "raw_only":
+        methods = [method for method in methods if method["equipment"] == EQUIPMENT_NONE]
     equipment_counts = {
         EQUIPMENT_NONE: 0,
         EQUIPMENT_KEG: _safe_int(kegs),

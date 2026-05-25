@@ -97,6 +97,7 @@ layout = html.Div(
                 dcc.Graph(
                     id="plan-leaderboard-graph",
                     className="leaderboard-graph",
+                    style={"height": "430px", "minHeight": "430px"},
                     config={"displayModeBar": False, "responsive": True},
                 ),
             ],
@@ -115,6 +116,16 @@ layout = html.Div(
                             ],
                         ),
                         html.Div(id="plan-selected-detail", className="detail-card"),
+                        html.Div(
+                            className="detail-card harvest-preview-card",
+                            children=[
+                                html.H3("Harvest Preview"),
+                                html.Div(
+                                    id="plan-harvest-preview",
+                                    className="harvest-preview-body",
+                                ),
+                            ],
+                        ),
                     ],
                 ),
                 html.Section(
@@ -207,7 +218,9 @@ def populate_plan_table(rows: list[dict] | None, selected_crop: dict | None):
 @callback(
     Output("plan-recommendation-cards", "children"),
     Output("plan-leaderboard-graph", "figure"),
+    Output("plan-leaderboard-graph", "style"),
     Output("plan-selected-detail", "children"),
+    Output("plan-harvest-preview", "children"),
     Output("plan-budget-gauge", "figure"),
     Output("plan-warning-panel", "children"),
     Input("plan-crop-table", "derived_virtual_data"),
@@ -238,7 +251,9 @@ def update_plan_today_views(
         return (
             [html.Div("No recommendations to show.", className="detail-card")],
             empty_chart,
+            _leaderboard_style(320),
             [html.H3("No crop selected"), html.P("Adjust filters to see recommendations.")],
+            _empty_harvest_preview(),
             _empty_budget_figure(),
             [html.H3("Warnings"), html.P("No warnings because no crop is selected.")],
         )
@@ -249,11 +264,13 @@ def update_plan_today_views(
 
     cards = _build_recommendation_cards(rows[:3])
     leaderboard = _build_leaderboard(rows, selected["crop_id"], metric, top_n)
+    leaderboard_style = _leaderboard_style(int(leaderboard.layout.height or 430))
     detail = _build_selected_detail(selected)
+    harvest_preview = _build_harvest_preview(selected)
     budget_chart = _build_budget_chart(selected, budget)
     warning_panel = _build_warning_panel(selected)
 
-    return cards, leaderboard, detail, budget_chart, warning_panel
+    return cards, leaderboard, leaderboard_style, detail, harvest_preview, budget_chart, warning_panel
 
 
 @callback(
@@ -302,10 +319,28 @@ def _build_recommendation_cards(top_rows: list[dict]) -> list[html.Div]:
                     html.P(f"{row['profit_total']:.0f}g expected total profit"),
                     html.P(f"{row['profit_per_day']:.1f}g/day"),
                     html.P(f"{row['harvest_count']} harvests, {row['seed_cost']:.0f}g seed cost"),
+                    _warning_badges(row),
                 ],
             )
         )
     return cards
+
+
+def _warning_badges(row: dict) -> html.Div:
+    flags = row.get("warning_flags") or []
+    if isinstance(flags, str):
+        flags = [flag for flag in flags.split("|") if flag]
+    badges = list(flags)
+    if row.get("affordable") is True:
+        badges.append("Affordable")
+    if row.get("is_regrowable"):
+        badges.append("Regrows")
+    if not badges:
+        badges = ["Ready"]
+    return html.Div(
+        className="warning-flags recommendation-badges",
+        children=[html.Span(badge, className="warning-flag") for badge in badges[:4]],
+    )
 
 
 def _build_leaderboard(rows: list[dict], selected_crop_id: str, metric: str, top_n: int) -> go.Figure:
@@ -387,6 +422,11 @@ def _build_leaderboard(rows: list[dict], selected_crop_id: str, metric: str, top
     return figure
 
 
+def _leaderboard_style(height: int) -> dict[str, str]:
+    height = max(320, int(height))
+    return {"height": f"{height}px", "minHeight": f"{height}px"}
+
+
 def _build_selected_detail(row: dict) -> list[object]:
     return [
         html.H3(row["crop_name"]),
@@ -404,6 +444,64 @@ def _build_selected_detail(row: dict) -> list[object]:
         ),
         html.P(row.get("rule_note") or "No special crop restriction."),
     ]
+
+
+def _build_harvest_preview(row: dict) -> list[object]:
+    first_harvest = int(row.get("first_harvest_day", 0) or 0)
+    window_days = int(row.get("window_days", 28) or 28)
+    harvest_count = int(row.get("harvest_count", 0) or 0)
+
+    if harvest_count < 1 or first_harvest < 1:
+        return _empty_harvest_preview("No harvest before the end of the selected planting window.")
+
+    regrowth_days = int(row.get("regrowth_days", 0) or 0)
+    harvest_days = [first_harvest]
+    if regrowth_days > 0:
+        for _ in range(1, harvest_count):
+            harvest_days.append(harvest_days[-1] + regrowth_days)
+    else:
+        growth_days = int(row.get("growth_days", 1) or 1)
+        for _ in range(1, harvest_count):
+            harvest_days.append(harvest_days[-1] + growth_days)
+
+    harvest_days = [day for day in harvest_days if day <= window_days]
+    if not harvest_days:
+        return _empty_harvest_preview("No harvest before the end of the selected planting window.")
+
+    visible_days = harvest_days[:10]
+    hidden_count = max(0, len(harvest_days) - len(visible_days))
+    interval = f"Every {regrowth_days} days after first harvest" if regrowth_days > 0 else "Replanted after each harvest"
+
+    day_nodes = [html.Span(f"Day {day}", className="harvest-day-pill") for day in visible_days]
+    if hidden_count:
+        day_nodes.append(html.Span(f"+{hidden_count} more", className="harvest-day-pill harvest-day-more"))
+
+    return [
+        html.Div(
+            className="harvest-preview-summary",
+            children=[
+                _harvest_stat("First harvest", f"Day {harvest_days[0]}"),
+                _harvest_stat("Last harvest", f"Day {harvest_days[-1]}"),
+                _harvest_stat("Total harvests", str(len(harvest_days))),
+            ],
+        ),
+        html.P(interval, className="harvest-preview-note"),
+        html.Div(className="harvest-day-row", children=day_nodes),
+    ]
+
+
+def _harvest_stat(label: str, value: str) -> html.Div:
+    return html.Div(
+        className="harvest-stat",
+        children=[
+            html.Span(label, className="metric-label"),
+            html.Strong(value, className="metric-value"),
+        ],
+    )
+
+
+def _empty_harvest_preview(message: str = "Select a crop to preview harvest days.") -> list[object]:
+    return [html.P(message, className="harvest-preview-note")]
 
 
 def _build_budget_chart(row: dict, budget: float | None) -> go.Figure:
@@ -481,6 +579,20 @@ def _build_budget_chart(row: dict, budget: float | None) -> go.Figure:
 def _empty_budget_figure() -> go.Figure:
     figure = go.Figure()
     figure.update_layout(height=170, margin={"l": 20, "r": 20, "t": 20, "b": 20})
+    return figure
+
+
+def _empty_figure(message: str, height: int) -> go.Figure:
+    figure = go.Figure()
+    figure.update_layout(
+        height=height,
+        margin={"l": 20, "r": 20, "t": 20, "b": 20},
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis={"visible": False},
+        yaxis={"visible": False},
+    )
+    figure.add_annotation(text=message, x=0.5, y=0.5, xref="paper", yref="paper", showarrow=False)
     return figure
 
 
