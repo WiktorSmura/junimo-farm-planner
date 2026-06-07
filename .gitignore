@@ -81,3 +81,4 @@ data/processed/*.csv
 !data/raw/.keep
 !data/processed/.keep
 !data/README.md
+!data/processed/crops_clean.csv
